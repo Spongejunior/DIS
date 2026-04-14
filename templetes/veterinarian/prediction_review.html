@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Review Predictions - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('vet_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_mapping') }}">
+        <i class="bi bi-people"></i> Farmer Mapping
+    </a>
+    <a class="nav-link active" href="{{ url_for('predictions_review') }}">
+        <i class="bi bi-clipboard-check"></i> Review Predictions
+    </a>
+    <a class="nav-link" href="{{ url_for('treatment_suggestions') }}">
+        <i class="bi bi-capsule"></i> Treatment Suggestions
+    </a>
+    <a class="nav-link" href="{{ url_for('mortality_reports') }}">
+        <i class="bi bi-graph-down"></i> Mortality Reports
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clipboard-check"></i> Disease Predictions Review</h2>
+    <div class="btn-group">
+        <button class="btn btn-outline-success" onclick="markAllReviewed()">
+            <i class="bi bi-check-all"></i> Mark All Reviewed
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Priority</label>
+                <select class="form-select">
+                    <option>All Priorities</option>
+                    <option>Urgent</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Confidence Level</label>
+                <select class="form-select">
+                    <option>All Levels</option>
+                    <option>High (>90%)</option>
+                    <option>Medium (70-90%)</option>
+                    <option>Low (<70%)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Animal Type</label>
+                <select class="form-select">
+                    <option>All Types</option>
+                    <option>Cattle</option>
+                    <option>Poultry</option>
+                    <option>Goats</option>
+                    <option>Sheep</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Pending Reviews -->
+<div class="row">
+    {% for i in range(3) %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Urgent Review Needed</h6>
+                    <span class="badge bg-danger">High Priority</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <small class="text-muted">Prediction ID: PRED-2024-00{{i+1}}</small>
+                    <small class="text-muted">Today, 10:3{{i}}0 AM</small>
+                </div>
+                
+                <h6>Respiratory Infection</h6>
+                <div class="mb-3">
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: 92%">92% Confidence</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Farmer:</strong> John Farmer</p>
+                    <p class="mb-1"><strong>Animal:</strong> Bessie (Cow-001)</p>
+                    <p class="mb-1"><strong>Age:</strong> 36 months</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Reported Symptoms:</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-secondary">High Fever</span>
+                        <span class="badge bg-secondary">Coughing</span>
+                        <span class="badge bg-secondary">Nasal Discharge</span>
+                        <span class="badge bg-secondary">Lethargy</span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>AI Recommendation:</h6>
+                    <p class="text-success">Immediate antibiotic treatment recommended. Isolate animal.</p>
+                </div>
+                
+                <div class="alert alert-info py-2">
+                    <small><i class="bi bi-thermometer-high"></i> <strong>Temperature:</strong> 40.2°C (High Fever)</small>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmModal{{i}}">
+                        <i class="bi bi-check-circle"></i> Confirm Prediction
+                    </button>
+                    <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modifyModal{{i}}">
+                        <i class="bi bi-pencil"></i> Modify Diagnosis
+                    </button>
+                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#detailsModal{{i}}">
+                        <i class="bi bi-eye"></i> View Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Reviewed Predictions -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Recently Reviewed Predictions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Farmer</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                        <th>Your Diagnosis</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2024-03-14</td>
+                        <td>Jane Smith</td>
+                        <td>Parasitic Infection</td>
+                        <td>89%</td>
+                        <td>Confirmed</td>
+                        <td><span class="badge bg-success">Treated</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2024-03-12</td>
+                        <td>Robert Johnson</td>
+                        <td>Foot Rot</td>
+                        <td>88%</td>
+                        <td>Confirmed</td>
+                        <td><span class="badge bg-success">Resolved</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2024-03-10</td>
+                        <td>Maria Garcia</td>
+                        <td>Nutritional Deficiency</td>
+                        <td>67%</td>
+                        <td>Modified to: Mineral Deficiency</td>
+                        <td><span class="badge bg-info">Monitoring</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal (Example) -->
+<div class="modal fade" id="confirmModal0" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Prediction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Confirm AI prediction of <strong>Respiratory Infection</strong> for Bessie (Cow-001)?</p>
+                <div class="mb-3">
+                    <label class="form-label">Add Notes (Optional)</label>
+                    <textarea class="form-control" rows="3" placeholder="Add any additional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success">Confirm Diagnosis</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAllReviewed() {
+    if (confirm('Mark all pending predictions as reviewed?')) {
+        alert('All predictions marked as reviewed!');
+        // Implement actual functionality here
+    }
+}
+</script>
+{% endblock %}

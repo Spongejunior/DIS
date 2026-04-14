@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Treatment Suggestions - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('vet_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_mapping') }}">
+        <i class="bi bi-people"></i> Farmer Mapping
+    </a>
+    <a class="nav-link" href="{{ url_for('predictions_review') }}">
+        <i class="bi bi-clipboard-check"></i> Review Predictions
+    </a>
+    <a class="nav-link active" href="{{ url_for('treatment_suggestions') }}">
+        <i class="bi bi-capsule"></i> Treatment Suggestions
+    </a>
+    <a class="nav-link" href="{{ url_for('mortality_reports') }}">
+        <i class="bi bi-graph-down"></i> Mortality Reports
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-capsule"></i> Treatment Suggestions & Management</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTreatmentModal">
+        <i class="bi bi-plus-circle"></i> New Treatment Plan
+    </button>
+</div>
+
+<!-- Pending Treatment Approvals -->
+<div class="card mb-4">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Pending Treatment Approvals</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Farmer</th>
+                        <th>Animal</th>
+                        <th>Condition</th>
+                        <th>Suggested Treatment</th>
+                        <th>AI Confidence</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>C-2024-045</td>
+                        <td>John Farmer</td>
+                        <td>Bessie (Cow-001)</td>
+                        <td>Respiratory Infection</td>
+                        <td>Oxytetracycline 20mg/kg for 5 days</td>
+                        <td>92%</td>
+                        <td>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
+                                <i class="bi bi-check"></i> Approve
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modifyTreatmentModal">
+                                <i class="bi bi-pencil"></i> Modify
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>C-2024-044</td>
+                        <td>Jane Smith</td>
+                        <td>Clucky (Chicken-012)</td>
+                        <td>Parasitic Infection</td>
+                        <td>Ivermectin 0.2mg/kg, single dose</td>
+                        <td>89%</td>
+                        <td>
+                            <button class="btn btn-sm btn-success">
+                                <i class="bi bi-check"></i> Approve
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-pencil"></i> Modify
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Treatments -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Active Treatment Plans</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Treatment ID</th>
+                                <th>Farmer</th>
+                                <th>Animal</th>
+                                <th>Medication</th>
+                                <th>Duration</th>
+                                <th>Progress</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>T-2024-023</td>
+                                <td>Robert Johnson</td>
+                                <td>Spotty (Goat-005)</td>
+                                <td>Penicillin + Topical Antiseptic</td>
+                                <td>7 days (Day 4)</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar" style="width: 57%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-warning">In Progress</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>T-2024-022</td>
+                                <td>Maria Garcia</td>
+                                <td>Daisy (Cow-008)</td>
+                                <td>Vitamin B Complex Injection</td>
+                                <td>10 days (Day 8)</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" style="width: 80%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-info">Almost Complete</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>T-2024-021</td>
+                                <td>John Farmer</td>
+                                <td>Multiple (Poultry)</td>
+                                <td>Feed Supplement (Vitamins)</td>
+                                <td>14 days (Day 12)</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" style="width: 86%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-success">Effective</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Treatment History -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Treatment History & Outcomes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Condition</th>
+                                <th>Treatment</th>
+                                <th>Duration</th>
+                                <th>Outcome</th>
+                                <th>Effectiveness</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Mar 10, 2024</td>
+                                <td>Foot Rot</td>
+                                <td>Penicillin + Topical</td>
+                                <td>7 days</td>
+                                <td><span class="badge bg-success">Cured</span></td>
+                                <td>95%</td>
+                            </tr>
+                            <tr>
+                                <td>Mar 5, 2024</td>
+                                <td>Nutritional Deficiency</td>
+                                <td>Vitamin Supplement</td>
+                                <td>14 days</td>
+                                <td><span class="badge bg-success">Improved</span></td>
+                                <td>88%</td>
+                            </tr>
+                            <tr>
+                                <td>Feb 28, 2024</td>
+                                <td>Respiratory Infection</td>
+                                <td>Oxytetracycline</td>
+                                <td>5 days</td>
+                                <td><span class="badge bg-success">Cured</span></td>
+                                <td>92%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Treatment Database & Quick Actions -->
+    <div class="col-md-4">
+        <!-- Common Treatments -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-book"></i> Common Treatments Database</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <h6>Respiratory Infections</h6>
+                        <small class="text-muted">Cattle, Goats, Sheep</small>
+                        <p class="mb-1">Oxytetracycline 20mg/kg for 5-7 days</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6>Parasitic Infections</h6>
+                        <small class="text-muted">All animals</small>
+                        <p class="mb-1">Ivermectin 0.2mg/kg, single dose</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6>Foot Rot</h6>
+                        <small class="text-muted">Cattle, Sheep, Goats</small>
+                        <p class="mb-1">Penicillin + Topical antiseptic, 7-10 days</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6>Nutritional Deficiencies</h6>
+                        <small class="text-muted">All animals</small>
+                        <p class="mb-1">Vitamin/mineral supplements, 14 days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Add Treatment -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quickTreatmentModal">
+                        <i class="bi bi-plus-circle"></i> Quick Treatment Template
+                    </button>
+                    <button class="btn btn-outline-info">
+                        <i class="bi bi-download"></i> Export Treatment Data
+                    </button>
+                    <button class="btn btn-outline-success">
+                        <i class="bi bi-graph-up"></i> View Success Rates
+                    </button>
+                    <button class="btn btn-outline-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Check Drug Interactions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Treatment Plan Modal -->
+<div class="modal fade" id="newTreatmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Treatment Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Select Farmer</label>
+                            <select class="form-select">
+                                <option>John Farmer</option>
+                                <option>Jane Smith</option>
+                                <option>Robert Johnson</option>
+                                <option>Maria Garcia</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Select Animal</label>
+                            <select class="form-select">
+                                <option>Bessie (Cow-001)</option>
+                                <option>Clucky (Chicken-012)</option>
+                                <option>Spotty (Goat-005)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Diagnosis/Condition</label>
+                            <input type="text" class="form-control" placeholder="Enter diagnosis...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Severity</label>
+                            <select class="form-select">
+                                <option>Mild</option>
+                                <option>Moderate</option>
+                                <option>Severe</option>
+                                <option>Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Primary Medication</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Medication name">
+                            <input type="text" class="form-control" style="width: 150px;" placeholder="Dosage">
+                            <select class="form-select" style="width: 150px;">
+                                <option>mg/kg</option>
+                                <option>ml/kg</option>
+                                <option>mg/animal</option>
+                                <option>ml/animal</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Frequency</label>
+                            <select class="form-select">
+                                <option>Once daily</option>
+                                <option>Twice daily</option>
+                                <option>Three times daily</option>
+                                <option>Every other day</option>
+                                <option>Weekly</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Duration (days)</label>
+                            <input type="number" class="form-control" min="1" value="7">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Route</label>
+                            <select class="form-select">
+                                <option>Oral</option>
+                                <option>Injection</option>
+                                <option>Topical</option>
+                                <option>Inhalation</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Additional Instructions</label>
+                        <textarea class="form-control" rows="3" placeholder="Enter special instructions..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Follow-up Required</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="followup">
+                            <label class="form-check-label" for="followup">Schedule follow-up examination</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Save Treatment Plan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Treatment Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Approve Treatment Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <h6>AI Suggested Treatment</h6>
+                    <p><strong>For:</strong> Bessie (Cow-001) - Respiratory Infection</p>
+                    <p><strong>Medication:</strong> Oxytetracycline 20mg/kg</p>
+                    <p><strong>Duration:</strong> 5 days, twice daily</p>
+                    <p><strong>Confidence:</strong> 92%</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Your Approval Notes</label>
+                    <textarea class="form-control" rows="3" placeholder="Add approval notes..."></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="notifyFarmer">
+                    <label class="form-check-label" for="notifyFarmer">Notify farmer immediately</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success">Approve & Send to Farmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

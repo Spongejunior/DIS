@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Farmer Mapping - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('vet_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link active" href="{{ url_for('farmer_mapping') }}">
+        <i class="bi bi-people"></i> Farmer Mapping
+    </a>
+    <a class="nav-link" href="{{ url_for('predictions_review') }}">
+        <i class="bi bi-clipboard-check"></i> Review Predictions
+    </a>
+    <a class="nav-link" href="{{ url_for('treatment_suggestions') }}">
+        <i class="bi bi-capsule"></i> Treatment Suggestions
+    </a>
+    <a class="nav-link" href="{{ url_for('mortality_reports') }}">
+        <i class="bi bi-graph-down"></i> Mortality Reports
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Farmer Mapping & Network Management</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignFarmerModal">
+        <i class="bi bi-person-plus"></i> Assign New Farmer
+    </button>
+</div>
+
+<!-- Farmer Network Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Farmers</h5>
+                <h2 class="text-primary">24</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Active Cases</h5>
+                <h2 class="text-warning">18</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Avg Response Time</h5>
+                <h2 class="text-success">2.4h</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Satisfaction Rate</h5>
+                <h2 class="text-info">94%</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Farmer Mapping Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Assigned Farmers</h5>
+            <div class="input-group" style="width: 300px;">
+                <input type="text" class="form-control" placeholder="Search farmers...">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Farmer ID</th>
+                        <th>Farmer Name</th>
+                        <th>Farm Location</th>
+                        <th>Animal Types</th>
+                        <th>Active Cases</th>
+                        <th>Last Contact</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>F-1001</td>
+                        <td>
+                            <strong>John Farmer</strong><br>
+                            <small class="text-muted">john.farmer@example.com</small>
+                        </td>
+                        <td>Green Valley, District 5</td>
+                        <td>
+                            <span class="badge bg-secondary">Cattle</span>
+                            <span class="badge bg-secondary">Poultry</span>
+                        </td>
+                        <td><span class="badge bg-warning">8 Active</span></td>
+                        <td>Today, 10:30 AM</td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#farmerDetailsModal">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-chat"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>F-1002</td>
+                        <td>
+                            <strong>Jane Smith</strong><br>
+                            <small class="text-muted">jane.smith@farm.com</small>
+                        </td>
+                        <td>North Hills, District 3</td>
+                        <td>
+                            <span class="badge bg-secondary">Poultry</span>
+                        </td>
+                        <td><span class="badge bg-warning">5 Active</span></td>
+                        <td>Yesterday, 3:45 PM</td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-chat"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>F-1003</td>
+                        <td>
+                            <strong>Robert Johnson</strong><br>
+                            <small class="text-muted">robert.j@agrifarm.com</small>
+                        </td>
+                        <td>West Valley, District 7</td>
+                        <td>
+                            <span class="badge bg-secondary">Goats</span>
+                            <span class="badge bg-secondary">Sheep</span>
+                        </td>
+                        <td><span class="badge bg-info">3 Active</span></td>
+                        <td>2 days ago</td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-chat"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>F-1004</td>
+                        <td>
+                            <strong>Maria Garcia</strong><br>
+                            <small class="text-muted">maria.g@organic.com</small>
+                        </td>
+                        <td>East Farms, District 2</td>
+                        <td>
+                            <span class="badge bg-secondary">Dairy Cattle</span>
+                        </td>
+                        <td><span class="badge bg-info">2 Active</span></td>
+                        <td>1 week ago</td>
+                        <td><span class="badge bg-secondary">Inactive</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-chat"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav>
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">Next</a></li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Geographical Distribution -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Geographical Distribution</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="border rounded p-3 text-center" style="height: 300px; background-color: #f8f9fa;">
+                    <h6 class="text-muted">Farmers Map Visualization</h6>
+                    <p class="mt-5"><i class="bi bi-map" style="font-size: 4rem; color: #6c757d;"></i></p>
+                    <p>Interactive map showing farmer locations and active cases</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6>District-wise Distribution</h6>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>District 5</span>
+                        <span class="badge bg-primary">8 farmers</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>District 3</span>
+                        <span class="badge bg-primary">6 farmers</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>District 7</span>
+                        <span class="badge bg-primary">5 farmers</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>District 2</span>
+                        <span class="badge bg-primary">3 farmers</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>District 1</span>
+                        <span class="badge bg-primary">2 farmers</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Farmer Modal -->
+<div class="modal fade" id="assignFarmerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign New Farmer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Select Farmer</label>
+                        <select class="form-select">
+                            <option value="">Choose farmer to assign...</option>
+                            <option>Michael Brown (Pending Assignment)</option>
+                            <option>Sarah Wilson (New Registration)</option>
+                            <option>David Lee (Requested Vet)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assignment Reason</label>
+                        <select class="form-select">
+                            <option>Proximity to Farm</option>
+                            <option>Specialization Required</option>
+                            <option>Farmer Request</option>
+                            <option>Workload Distribution</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" rows="3" placeholder="Add any special notes or instructions..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Assign Farmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Farmer Details Modal -->
+<div class="modal fade" id="farmerDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Farmer Details: John Farmer (F-1001)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Contact Information</h6>
+                        <p><strong>Email:</strong> john.farmer@example.com</p>
+                        <p><strong>Phone:</strong> +1 (555) 123-4567</p>
+                        <p><strong>Address:</strong> 123 Farm Road, Green Valley</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Farm Information</h6>
+                        <p><strong>Farm Name:</strong> Green Valley Farm</p>
+                        <p><strong>Size:</strong> 50 acres</p>
+                        <p><strong>Established:</strong> 2015</p>
+                    </div>
+                </div>
+                <hr>
+                <h6>Animal Inventory</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6>Cattle</h6>
+                                <h4>25</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6>Poultry</h6>
+                                <h4>120</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6>Goats</h6>
+                                <h4>15</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6>Total</h6>
+                                <h4>160</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6>Recent Activity</h6>
+                <ul>
+                    <li>Today, 10:30 AM: Reported respiratory symptoms (Cow-001)</li>
+                    <li>Yesterday: Completed treatment for parasitic infection</li>
+                    <li>March 10: Regular monthly check-up completed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

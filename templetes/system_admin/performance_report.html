@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Reports - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('sys_admin_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link" href="{{ url_for('system_logs') }}">
+        <i class="bi bi-journal-text"></i> System Logs
+    </a>
+    <a class="nav-link active" href="{{ url_for('performance_reports') }}">
+        <i class="bi bi-speedometer2"></i> Performance Reports
+    </a>
+    <a class="nav-link" href="{{ url_for('model_updates') }}">
+        <i class="bi bi-cloud-arrow-up"></i> Model Updates
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> System Performance Reports</h2>
+    <div class="btn-group">
+        <button class="btn btn-outline-primary" onclick="generatePerformanceReport()">
+            <i class="bi bi-file-earmark-text"></i> Generate Report
+        </button>
+        <button class="btn btn-outline-success" onclick="exportPerformanceData()">
+            <i class="bi bi-download"></i> Export Data
+        </button>
+        <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#comparePerformanceModal">
+            <i class="bi bi-graph-up-arrow"></i> Compare Periods
+        </button>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">System Uptime</h6>
+                        <h2 class="mb-0">99.8%</h2>
+                    </div>
+                    <i class="bi bi-activity" style="font-size: 2rem;"></i>
+                </div>
+                <small>Last 30 days</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Avg Response Time</h6>
+                        <h2 class="mb-0">42ms</h2>
+                    </div>
+                    <i class="bi bi-speedometer" style="font-size: 2rem;"></i>
+                </div>
+                <small>API requests</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Error Rate</h6>
+                        <h2 class="mb-0">0.12%</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                </div>
+                <small>of total requests</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Peak Load</h6>
+                        <h2 class="mb-0">78%</h2>
+                    </div>
+                    <i class="bi bi-graph-up" style="font-size: 2rem;"></i>
+                </div>
+                <small>CPU usage</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Response Time Trend (Last 7 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="border rounded p-3 text-center" style="height: 300px; background-color: #f8f9fa;">
+                    <p class="mt-5"><i class="bi bi-graph-up" style="font-size: 4rem; color: #6c757d;"></i></p>
+                    <p>Line chart showing average response time in milliseconds</p>
+                    <small>Peak: 128ms (Mar 12), Low: 28ms (Mar 14)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">System Resource Utilization</h5>
+            </div>
+            <div class="card-body">
+                <div class="border rounded p-3 text-center" style="height: 300px; background-color: #f8f9fa;">
+                    <p class="mt-5"><i class="bi bi-pie-chart" style="font-size: 4rem; color: #6c757d;"></i></p>
+                    <p>Pie chart showing CPU, Memory, Disk, and Network usage</p>
+                    <small>CPU: 42%, Memory: 68%, Disk: 85%, Network: 32%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Performance Breakdown -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Detailed Performance Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <ul class="nav nav-tabs" id="performanceTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="api-tab" data-bs-toggle="tab" data-bs-target="#api-performance" type="button">
+                    API Performance
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="database-tab" data-bs-toggle="tab" data-bs-target="#database-performance" type="button">
+                    Database Performance
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prediction-tab" data-bs-toggle="tab" data-bs-target="#prediction-performance" type="button">
+                    Prediction Engine
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="user-tab" data-bs-toggle="tab" data-bs-target="#user-performance" type="button">
+                    User Experience
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="performanceTabsContent">
+            <!-- API Performance Tab -->
+            <div class="tab-pane fade show active" id="api-performance" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>API Endpoint Performance</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Endpoint</th>
+                                        <th>Avg Response</th>
+                                        <th>Success Rate</th>
+                                        <th>Requests (24h)</th>
+                                        <th>Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>GET /api/symptoms</td>
+                                        <td>45ms</td>
+                                        <td>99.8%</td>
+                                        <td>1,245</td>
+                                        <td><span class="badge bg-success">↑ Improving</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>POST /api/predict</td>
+                                        <td>128ms</td>
+                                        <td>98.5%</td>
+                                        <td>842</td>
+                                        <td><span class="badge bg-warning">→ Stable</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>GET /api/treatments</td>
+                                        <td>62ms</td>
+                                        <td>99.2%</td>
+                                        <td>568</td>
+                                        <td><span class="badge bg-success">↑ Improving</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>POST /api/reports</td>
+                                        <td>89ms</td>
+                                        <td>97.8%</td>
+                                        <td>324</td>
+                                        <td><span class="badge bg-danger">↓ Degrading</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>API Error Analysis</h6>
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Rate Limit Exceeded</h6>
+                                    <small class="text-muted">42 occurrences</small>
+                                </div>
+                                <p class="mb-1">Mostly from IP: 192.168.1.100</p>
+                                <small>Peak time: 10:00-11:00 AM</small>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Timeout Errors</h6>
+                                    <small class="text-muted">18 occurrences</small>
+                                </div>
+                                <p class="mb-1">POST /api/predict endpoint</p>
+                                <small>During model processing peaks</small>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Authentication Errors</h6>
+                                    <small class="text-muted">12 occurrences</small>
+                                </div>
+                                <p class="mb-1">Expired or invalid tokens</p>
+                                <small>Recommend token refresh implementation</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Database Performance Tab -->
+            <div class="tab-pane fade" id="database-performance" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Database Query Performance</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Query Type</th>
+                                        <th>Avg Time</th>
+                                        <th>Peak Time</th>
+                                        <th>Calls (24h)</th>
+                                        <th>Index Usage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>SELECT symptoms</td>
+                                        <td>12ms</td>
+                                        <td>45ms</td>
+                                        <td>8,452</td>
+                                        <td>92%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>INSERT predictions</td>
+                                        <td>28ms</td>
+                                        <td>128ms</td>
+                                        <td>842</td>
+                                        <td>85%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>UPDATE treatments</td>
+                                        <td>35ms</td>
+                                        <td>98ms</td>
+                                        <td>324</td>
+                                        <td>78%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>JOIN queries</td>
+                                        <td>62ms</td>
+                                        <td>245ms</td>
+                                        <td>568</td>
+                                        <td>65%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Database Health Metrics</h6>
+                        <div class="mb-3">
+                            <span>Connection Pool Usage</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: 68%">68%</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>Cache Hit Ratio</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-info" style="width: 82%">82%</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>Deadlock Rate</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-warning" style="width: 0.2%">0.2%</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>Storage Utilization</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-danger" style="width: 85%">85%</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning" onclick="optimizeDatabase()">
+                            <i class="bi bi-speedometer2"></i> Run Optimization
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prediction Engine Tab -->
+            <div class="tab-pane fade" id="prediction-performance" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Model Performance Metrics</h6>
+                        <div class="mb-3">
+                            <span>Prediction Accuracy</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: 89.2%">89.2%</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>Average Processing Time</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-info" style="width: 75%">1.2 seconds</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>Model Confidence Distribution</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-primary" style="width: 45%">High: 45%</div>
+                                <div class="progress-bar bg-warning" style="width: 35%">Medium: 35%</div>
+                                <div class="progress-bar bg-secondary" style="width: 20%">Low: 20%</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <span>GPU Utilization</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: 32%">32%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Prediction Engine Alerts</h6>
+                        <div class="alert alert-warning">
+                            <h6>High Memory Usage</h6>
+                            <p>Prediction engine using 4.2GB RAM during peak loads</p>
+                            <small>Consider memory optimization or scaling</small>
+                        </div>
+                        <div class="alert alert-info">
+                            <h6>Batch Processing Delay</h6>
+                            <p>Overnight batch predictions taking 15% longer than usual</p>
+                            <small>Investigate data pipeline efficiency</small>
+                        </div>
+                        <div class="alert alert-success">
+                            <h6>Accuracy Improvement</h6>
+                            <p>Model v2.1.4 showing 1.5% accuracy improvement</p>
+                            <small>New training data is effective</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Experience Tab -->
+            <div class="tab-pane fade" id="user-performance" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Page Load Performance</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Page</th>
+                                        <th>Avg Load Time</th>
+                                        <th>Peak Load Time</th>
+                                        <th>Bounce Rate</th>
+                                        <th>User Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Farmer Dashboard</td>
+                                        <td>1.2s</td>
+                                        <td>3.8s</td>
+                                        <td>12%</td>
+                                        <td>4.5/5</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Symptom Form</td>
+                                        <td>2.1s</td>
+                                        <td>5.2s</td>
+                                        <td>8%</td>
+                                        <td>4.2/5</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Predictions Page</td>
+                                        <td>1.8s</td>
+                                        <td>4.5s</td>
+                                        <td>15%</td>
+                                        <td>4.0/5</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Vet Dashboard</td>
+                                        <td>2.4s</td>
+                                        <td>6.1s</td>
+                                        <td>5%</td>
+                                        <td>4.7/5</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>User Satisfaction Metrics</h6>
+                        <div class="mb-4">
+                            <span>Overall Satisfaction</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: 94%">94%</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <span>System Reliability Rating</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-info" style="width: 92%">92%</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <span>Ease of Use</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-warning" style="width: 88%">88%</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <span>Response Time Satisfaction</span>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-primary" style="width: 90%">90%</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#userFeedbackModal">
+                            <i class="bi bi-chat-left-text"></i> View User Feedback
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Recommendations -->
+<div class="card">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Performance Recommendations</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-cpu"></i> CPU Optimization</h6>
+                    <p>Prediction engine CPU usage peaks at 78% during 10AM-2PM</p>
+                    <small><strong>Recommendation:</strong> Implement load balancing or scale horizontally</small>
+                </div>
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-database"></i> Database Optimization</h6>
+                    <p>JOIN queries taking 245ms peak time, index usage at 65%</p>
+                    <small><strong>Recommendation:</strong> Add missing indexes and optimize query structure</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle"></i> Positive Findings</h6>
+                    <p>API response times improved by 15% since last month</p>
+                    <small><strong>Action:</strong> Continue current optimization strategies</small>
+                </div>
+                <div class="alert alert-danger">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Critical Issue</h6>
+                    <p>Database storage at 85% - nearing critical threshold</p>
+                    <small><strong>Recommendation:</strong> Implement data archiving or expand storage immediately</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#actionPlanModal">
+                <i class="bi bi-clipboard-check"></i> Create Action Plan
+            </button>
+            <button class="btn btn-outline-secondary" onclick="scheduleOptimization()">
+                <i class="bi bi-calendar-check"></i> Schedule Optimization
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Performance Modal -->
+<div class="modal fade" id="comparePerformanceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Compare Performance Periods</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Period 1</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" value="2024-02-15">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" value="2024-02-29">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Period 2</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" value="2024-03-01">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" value="2024-03-15">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Metrics to Compare</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareUptime" checked>
+                                <label class="form-check-label" for="compareUptime">System Uptime</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareResponse" checked>
+                                <label class="form-check-label" for="compareResponse">Response Time</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareErrors" checked>
+                                <label class="form-check-label" for="compareErrors">Error Rate</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareCPU">
+                                <label class="form-check-label" for="compareCPU">CPU Usage</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareMemory">
+                                <label class="form-check-label" for="compareMemory">Memory Usage</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="compareUsers">
+                                <label class="form-check-label" for="compareUsers">User Activity</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Generate Comparison</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function generatePerformanceReport() {
+    alert('Performance report generation initiated. Check Reports section in 5 minutes.');
+    // Implement actual functionality here
+}
+
+function exportPerformanceData() {
+    alert('Performance data export initiated. Download will start shortly.');
+    // Implement actual functionality here
+}
+
+function optimizeDatabase() {
+    if (confirm('Run database optimization? This may temporarily affect performance.')) {
+        alert('Database optimization started.');
+        // Implement actual functionality here
+    }
+}
+
+function scheduleOptimization() {
+    alert('Optimization scheduling dialog opened.');
+    // Implement actual functionality here
+}
+</script>
+{% endblock %}

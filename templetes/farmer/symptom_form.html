@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Report Symptoms - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('farmer_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link active" href="{{ url_for('symptom_form') }}">
+        <i class="bi bi-clipboard-plus"></i> Report Symptoms
+    </a>
+    <a class="nav-link" href="{{ url_for('symptom_history') }}">
+        <i class="bi bi-clock-history"></i> Symptom History
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_predictions') }}">
+        <i class="bi bi-graph-up"></i> Disease Predictions
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_registration') }}">
+        <i class="bi bi-person-badge"></i> My Profile
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clipboard-plus"></i> Report Animal Symptoms</h2>
+    <a href="{{ url_for('symptom_history') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history"></i> View History
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Symptom Data Collection Form</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('symptom_form') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-4">
+                <h5><i class="bi bi-egg"></i> Animal Information</h5>
+                <hr>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Animal ID *</label>
+                        <input type="text" class="form-control" name="animal_id" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Animal Name</label>
+                        <input type="text" class="form-control" name="animal_name">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Animal Type *</label>
+                        <select class="form-select" name="animal_type" required>
+                            <option value="">Select Type</option>
+                            <option value="cattle">Cattle</option>
+                            <option value="goat">Goat</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Age (months)</label>
+                        <input type="number" class="form-control" name="animal_age" min="0">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Weight (kg)</label>
+                        <input type="number" class="form-control" name="animal_weight" min="0" step="0.1">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Breed</label>
+                        <input type="text" class="form-control" name="animal_breed">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5><i class="bi bi-clipboard-pulse"></i> Symptoms</h5>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Appetite *</label>
+                        <select class="form-select" name="appetite" required>
+                            <option value="">Select</option>
+                            <option value="normal">Normal</option>
+                            <option value="reduced">Reduced</option>
+                            <option value="none">No Appetite</option>
+                            <option value="increased">Increased</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Body Temperature (°C) *</label>
+                        <input type="number" class="form-control" name="temperature" step="0.1" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Heart Rate</label>
+                        <input type="number" class="form-control" name="heart_rate" min="30" max="150">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Respiration Rate</label>
+                        <input type="number" class="form-control" name="respiration_rate" min="10" max="100">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Rumen Movement</label>
+                        <select class="form-select" name="rumen_movement">
+                            <option value="normal">Normal</option>
+                            <option value="reduced">Reduced</option>
+                            <option value="absent">Absent</option>
+                            <option value="increased">Increased</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Stool Consistency</label>
+                        <select class="form-select" name="stool_consistency">
+                            <option value="normal">Normal</option>
+                            <option value="loose">Loose</option>
+                            <option value="watery">Watery Diarrhea</option>
+                            <option value="firm">Firm/Hard</option>
+                            <option value="bloody">Bloody</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Milk Production</label>
+                        <select class="form-select" name="milk_production">
+                            <option value="normal">Normal</option>
+                            <option value="reduced">Reduced</option>
+                            <option value="stopped">Stopped</option>
+                            <option value="abnormal">Abnormal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_dairy" id="is_dairy">
+                            <label class="form-check-label" for="is_dairy">Dairy Animal</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Additional Symptoms (select all that apply)</label>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="lethargy">
+                                <label class="form-check-label">Lethargy</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="vomiting">
+                                <label class="form-check-label">Vomiting</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="swelling">
+                                <label class="form-check-label">Swelling</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="nasal_discharge">
+                                <label class="form-check-label">Nasal Discharge</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="skin_lesions">
+                                <label class="form-check-label">Skin Lesions</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="lameness">
+                                <label class="form-check-label">Lameness</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="weight_loss">
+                                <label class="form-check-label">Weight Loss</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="symptoms" value="eye_discharge">
+                                <label class="form-check-label">Eye Discharge</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Other Symptoms Description</label>
+                    <textarea class="form-control" name="additional_symptoms" rows="3" placeholder="Describe any other symptoms..."></textarea>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5><i class="bi bi-tree"></i> Environmental Factors</h5>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Current Feed Type</label>
+                        <input type="text" class="form-control" name="feed_type">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Housing Conditions</label>
+                        <select class="form-select" name="housing_conditions">
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Recent Feed Changes</label>
+                        <textarea class="form-control" name="feed_changes" rows="2"></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Recent Treatments / Medications</label>
+                        <textarea class="form-control" name="recent_treatments" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="reset" class="btn btn-secondary">Clear Form</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload"></i> Submit for Disease Prediction
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h6><i class="bi bi-info-circle"></i> Information</h6>
+    <p class="mb-0">After submission, symptoms will be analyzed by the system and the results will appear in the Predictions section. For emergencies, contact your veterinarian immediately.</p>
+</div>
+{% endblock %}

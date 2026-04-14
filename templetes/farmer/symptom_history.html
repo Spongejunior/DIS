@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Symptom History - Animal Health System{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('farmer_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link" href="{{ url_for('symptom_form') }}">
+        <i class="bi bi-clipboard-plus"></i> Report Symptoms
+    </a>
+    <a class="nav-link active" href="{{ url_for('symptom_history') }}">
+        <i class="bi bi-clock-history"></i> Symptom History
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_predictions') }}">
+        <i class="bi bi-graph-up"></i> Disease Predictions
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_registration') }}">
+        <i class="bi bi-person-badge"></i> My Profile
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history"></i> Symptom History & Records</h2>
+    <a href="{{ url_for('symptom_form') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Report
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <select class="form-select">
+                    <option>Last 7 days</option>
+                    <option>Last 30 days</option>
+                    <option>Last 90 days</option>
+                    <option>All time</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Animal</label>
+                <select class="form-select">
+                    <option>All Animals</option>
+                    <option>Bessie (Cow-001)</option>
+                    <option>Clucky (Chicken-012)</option>
+                    <option>Spotty (Goat-005)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select class="form-select">
+                    <option>All Statuses</option>
+                    <option>Pending Prediction</option>
+                    <option>Prediction Complete</option>
+                    <option>Under Vet Review</option>
+                    <option>Resolved</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reports Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Symptom Reports</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Report ID</th>
+                        <th>Date</th>
+                        <th>Animal</th>
+                        <th>Symptoms</th>
+                        <th>Status</th>
+                        <th>Prediction</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>R-2024-045</td>
+                        <td>2024-03-15</td>
+                        <td>Bessie (Cow-001)</td>
+                        <td>Fever, Coughing, Reduced Appetite</td>
+                        <td><span class="badge bg-success">Resolved</span></td>
+                        <td>Respiratory Infection (92%)</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#detailsModal1">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>R-2024-044</td>
+                        <td>2024-03-12</td>
+                        <td>Clucky (Chicken-012)</td>
+                        <td>Lethargy, Diarrhea</td>
+                        <td><span class="badge bg-warning">Under Review</span></td>
+                        <td>Parasitic Infection (76%)</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#detailsModal2">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>R-2024-043</td>
+                        <td>2024-03-10</td>
+                        <td>Spotty (Goat-005)</td>
+                        <td>Swelling, Lameness</td>
+                        <td><span class="badge bg-success">Resolved</span></td>
+                        <td>Foot Rot (88%)</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>R-2024-042</td>
+                        <td>2024-03-08</td>
+                        <td>Bessie (Cow-001)</td>
+                        <td>Mild Fever, Normal Appetite</td>
+                        <td><span class="badge bg-secondary">Pending</span></td>
+                        <td>Awaiting Analysis</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>R-2024-041</td>
+                        <td>2024-03-05</td>
+                        <td>Multiple (Poultry)</td>
+                        <td>Reduced Feed Intake</td>
+                        <td><span class="badge bg-info">Predicted</span></td>
+                        <td>Nutritional Deficiency (67%)</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav>
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">Next</a></li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Details Modal 1 -->
+<div class="modal fade" id="detailsModal1" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Report Details: R-2024-045</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Animal Information</h6>
+                        <p><strong>Name/ID:</strong> Bessie (Cow-001)</p>
+                        <p><strong>Type:</strong> Cattle</p>
+                        <p><strong>Age:</strong> 36 months</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Report Information</h6>
+                        <p><strong>Date:</strong> March 15, 2024</p>
+                        <p><strong>Status:</strong> <span class="badge bg-success">Resolved</span></p>
+                        <p><strong>Prediction:</strong> Respiratory Infection (92%)</p>
+                    </div>
+                </div>
+                <hr>
+                <h6>Symptoms Reported</h6>
+                <ul>
+                    <li>Body Temperature: 40.2°C (High Fever)</li>
+                    <li>Appetite: Reduced</li>
+                    <li>Breathing: Coughing, Labored</li>
+                    <li>Nasal Discharge: Present</li>
+                    <li>Lethargy: Yes</li>
+                </ul>
+                <h6 class="mt-3">Treatment Provided</h6>
+                <p>Antibiotics prescribed by Dr. Smith. Complete recovery after 5-day treatment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

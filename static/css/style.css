@@ -1,0 +1,330 @@
+/* Animal Health System - Custom Styles */
+:root {
+    --primary-color: #2c7873;
+    --secondary-color: #6fb3b8;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+/* Custom Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fa;
+    opacity: 1;
+}
+
+.navbar-brand {
+    font-weight: 700;
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+    border-right: 1px solid #dee2e6;
+    min-height: calc(100vh - 56px);
+}
+
+.sidebar .nav-link {
+    color: #495057;
+    padding: 0.75rem 1rem;
+    margin: 0.25rem 0;
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #e9ecef;
+    color: var(--primary-color);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+}
+
+.stat-card {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.stat-card .card-body {
+    padding: 1.5rem;
+}
+
+.stat-card i {
+    opacity: 0.9;
+}
+
+.animal-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #245e5a;
+    border-color: #245e5a;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.badge {
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.alert {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.alert-primary {
+    background-color: rgba(44, 120, 115, 0.1);
+    color: var(--primary-color);
+}
+
+/* Dashboard specific */
+.dashboard-widget {
+    height: 100%;
+}
+
+.quick-action-btn {
+    transition: transform 0.2s;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Symptom form styles */
+.symptom-checkbox-group {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.symptom-checkbox-group .form-check {
+    margin-bottom: 0.5rem;
+}
+
+/* Prediction confidence bars */
+.confidence-bar {
+    height: 10px;
+    border-radius: 5px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    border-radius: 5px;
+}
+
+/* Log viewer */
+.log-container {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid #333;
+}
+
+.log-time {
+    color: #6c757d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6;
+        box-shadow: none;
+    }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes pageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-shell {
+    position: relative;
+}
+
+.page-content {
+    animation: pageEnter 0.35s ease-out;
+    transform-origin: top center;
+}
+
+.page-loader {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 247, 250, 0.78);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 2000;
+}
+
+.page-loader.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.page-loader__spinner {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Loading spinner */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Animal type indicators */
+.cattle-badge {
+    background-color: #8b4513;
+    color: white;
+}
+
+.goat-badge {
+    background-color: #a0522d;
+    color: white;
+}
+
+/* Status indicators */
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.status-pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.status-predicted {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.status-reviewed {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-resolved {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
