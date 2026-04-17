@@ -19,7 +19,7 @@ from models import db, User, SymptomReport, Prediction, Treatment, MortalityRepo
 from forms import LoginForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
 
 # Initialize Flask app
-app = Flask(__name__, template_folder='templetes', static_folder='static')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(config['development'])
 config['development'].init_app(app)
 
