@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - Organization Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">User Management System</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab">
+                📋 Pending Approvals <span class="badge bg-warning">{{ pending_approvals|length }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="assign-tab" data-bs-toggle="tab" href="#assign" role="tab">
+                🔗 Assign Farmers to Vets
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="all-tab" data-bs-toggle="tab" href="#all" role="tab">
+                👥 All Users <span class="badge bg-info">{{ all_users|length }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="remove-tab" data-bs-toggle="tab" href="#remove" role="tab">
+                🗑️ Remove Users
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- TAB 1: Pending Approvals -->
+        <div class="tab-pane fade show active" id="pending" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">⏳ Pending User Registrations</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_approvals %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Full Name</th>
+                                        <th>Role</th>
+                                        <th>Registration Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in pending_approvals %}
+                                    <tr>
+                                        <td><strong>{{ user.username }}</strong></td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.full_name or 'N/A' }}</td>
+                                        <td>
+                                            {% if user.role == 'farmer' %}
+                                                <span class="badge bg-success">Farmer</span>
+                                            {% elif user.role == 'veterinarian' %}
+                                                <span class="badge bg-primary">Veterinarian</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user.registration_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <form method="POST" style="display:inline;">
+                                                {{ form.hidden_tag() }}
+                                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                <input type="hidden" name="action" value="approve">
+                                                <button type="submit" class="btn btn-sm btn-success">✓ Approve</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info" role="alert">
+                            ✓ All users have been approved! No pending registrations.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Assign Farmers to Vets -->
+        <div class="tab-pane fade" id="assign" role="tabpanel">
+            <div class="row">
+                <!-- Farmers List -->
+                <div class="col-md-5">
+                    <div class="card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">👨‍🌾 Available Farmers</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            {% if farmers %}
+                                <div class="list-group">
+                                    {% for farmer in farmers %}
+                                        <div class="list-group-item">
+                                            <h6 class="mb-1">{{ farmer.full_name }}</h6>
+                                            <small class="text-muted">
+                                                <span class="badge bg-light text-dark">ID: {{ farmer.id }}</span>
+                                                {{ farmer.username }}
+                                            </small>
+                                            <p class="mb-0 small">{{ farmer.farm_name or 'N/A' }}</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">No farmers found</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Veterinarians List -->
+                <div class="col-md-5">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">🩺 Available Veterinarians</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            {% if veterinarians %}
+                                <div class="list-group">
+                                    {% for vet in veterinarians %}
+                                        <div class="list-group-item">
+                                            <h6 class="mb-1">{{ vet.full_name }}</h6>
+                                            <small class="text-muted">
+                                                <span class="badge bg-light text-dark">ID: {{ vet.id }}</span>
+                                                {{ vet.username }}
+                                            </small>
+                                            <p class="mb-0 small">{{ vet.location or 'N/A' }}</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">No veterinarians found</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignment Form -->
+                <div class="col-md-2">
+                    <div class="card h-100">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">🔗 Assign</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {{ form.hidden_tag() }}
+                                <div class="mb-3">
+                                    <label for="farmer_id" class="form-label">Farmer ID:</label>
+                                    <input type="number" class="form-control" id="farmer_id" name="user_id" placeholder="e.g., 2" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="vet_id" class="form-label">Vet ID:</label>
+                                    <input type="number" class="form-control" id="vet_id" name="veterinarian_id" placeholder="e.g., 3" required>
+                                </div>
+                                <input type="hidden" name="action" value="assign">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <strong>Assign</strong>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: All Users -->
+        <div class="tab-pane fade" id="all" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">📊 System Users Overview</h5>
+                </div>
+                <div class="card-body">
+                    {% if all_users %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Full Name</th>
+                                        <th>Role</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in all_users %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary">{{ user.id }}</span></td>
+                                        <td><strong>{{ user.username }}</strong></td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.full_name or '—' }}</td>
+                                        <td>
+                                            {% if user.role == 'farmer' %}
+                                                <span class="badge bg-success">👨‍🌾 Farmer</span>
+                                            {% elif user.role == 'veterinarian' %}
+                                                <span class="badge bg-primary">🩺 Vet</span>
+                                            {% elif user.role == 'organization_admin' %}
+                                                <span class="badge bg-warning text-dark">⚙️ Org Admin</span>
+                                            {% elif user.role == 'system_admin' %}
+                                                <span class="badge bg-danger">👑 System Admin</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user.location or '—' }}</td>
+                                        <td>
+                                            {% if user.is_approved %}
+                                                <span class="badge bg-success">✓ Approved</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">⏳ Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user.registration_date.strftime('%Y-%m-%d') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">No users found in the system</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: Remove Users -->
+        <div class="tab-pane fade" id="remove" role="tabpanel">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">🗑️ Danger Zone - Remove Users</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <strong>⚠️ WARNING:</strong> This action is <strong>permanent</strong> and cannot be undone. All associated data will be deleted.
+                    </div>
+
+                    {% if all_users %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in all_users %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.role }}</td>
+                                        <td>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirm('Are you absolutely sure you want to permanently delete {{ user.username }}?');">
+                                                {{ form.hidden_tag() }}
+                                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                <input type="hidden" name="action" value="remove">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .list-group-item {
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
+
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+        border-color: #0d6efd;
+    }
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1rem;
+    }
+
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid #0d6efd;
+        font-weight: 600;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
