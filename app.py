@@ -8,23 +8,30 @@ if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, abort, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import json
 import random
 import string
 from functools import wraps
+from sqlalchemy import text
+
+def get_malawi_time():
+    """Returns the current time in Malawi (UTC+2)"""
+    return datetime.now(timezone(timedelta(hours=2)))
 
 from config import config
 from models import db, User, SymptomReport, Prediction, Treatment, MortalityReport, SystemLog, PerformanceMetric, ModelVersion, Report, Notification, Configuration
 from forms import LoginForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
+from mail_utils import mail, send_approval_email, send_rejection_email
 
 # Initialize Flask app
-app = Flask(__name__, template_folder='templetes', static_folder='static')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(config['development'])
 config['development'].init_app(app)
 
 # Initialize extensions
 db.init_app(app)
+mail.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -104,9 +111,30 @@ def log_system_event(level, component, message, user_id=None, details=None):
         user_id=user_id,
         ip_address=request.remote_addr,
         message=message,
-        details=json.dumps(details) if details else None
+        details=json.dumps(details) if details else None,
+        timestamp=get_malawi_time()
     )
     db.session.add(log)
+    db.session.commit()
+
+
+def ensure_user_approval_columns():
+    existing_columns = {
+        row[1] for row in db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+    }
+
+    if 'status' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN status VARCHAR(20) DEFAULT 'pending'"))
+    if 'approved_at' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN approved_at DATETIME"))
+    if 'rejected_at' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN rejected_at DATETIME"))
+    if 'production_focus' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN production_focus VARCHAR(50)"))
+    if 'specific_location' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN specific_location VARCHAR(200)"))
+
+    db.session.execute(text("UPDATE user SET status = 'approved' WHERE status IS NULL"))
     db.session.commit()
 
 def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None):
@@ -130,7 +158,9 @@ def create_default_users():
             email='sysadmin@animalhealth.com',
             full_name='System Administrator',
             role='system_admin',
-            location='Headquarters'
+            location='Headquarters',
+            status='approved',
+            approved_at=get_malawi_time()
         )
         sysadmin.set_password('pass123')
         db.session.add(sysadmin)
@@ -142,7 +172,9 @@ def create_default_users():
             email='orgadmin@animalhealth.com',
             full_name='Organization Administrator',
             role='organization_admin',
-            location='Headquarters'
+            location='Headquarters',
+            status='approved',
+            approved_at=get_malawi_time()
         )
         orgadmin.set_password('pass123')
         db.session.add(orgadmin)
@@ -155,7 +187,9 @@ def create_default_users():
             full_name='Dr. Sarah Smith',
             phone='+1 (555) 987-6543',
             role='veterinarian',
-            location='Central District'
+            location='Central District',
+            status='approved',
+            approved_at=get_malawi_time()
         )
         vet.set_password('pass123')
         db.session.add(vet)
@@ -168,27 +202,44 @@ def create_default_users():
             full_name='John Farmer',
             phone='+1 (555) 123-4567',
             role='farmer',
-            location='123 Farm Road, Green Valley',
+            location='Lilongwe',
             farm_name='Green Valley Farm',
-            farm_size='50 acres',
-            animal_types='Cattle,Poultry,Goats'
-        )
+            animal_types='Cattle,Goats',
+            production_focus='dairy',
+            status='approved',
+            approved_at=get_malawi_time()
+            )
         farmer.set_password('pass123')
         db.session.add(farmer)
-    
+
+    existing_default_users = User.query.filter(
+        User.username.in_(['sysadmin', 'orgadmin', 'vet1', 'farmer1'])
+    ).all()
+    for user in existing_default_users:
+        user.status = 'approved'
+        if not user.approved_at:
+            user.approved_at = get_malawi_time()
+        user.rejected_at = None
+
     db.session.commit()
 
 # Create tables and seed default users after helper definitions are available
 with app.app_context():
     db.create_all()
+    ensure_user_approval_columns()
     create_default_users()
 
 # Routes
+@app.route('/landing')
+def landing_page():
+    return render_template('landing_files/landing.html')
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for('landing_page'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -200,13 +251,15 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         
         if user and user.check_password(form.password.data):
-            # Check role
-            if user.role != form.role.data:
-                flash(f'Please select correct role: {user.role}', 'warning')
-                return render_template('auth/login.html', form=form)
-            
+            if user.status == 'pending':
+                flash('Your account is awaiting admin approval.', 'warning')
+                return redirect(url_for('login'))
+            if user.status == 'rejected':
+                flash('Your account was rejected.', 'danger')
+                return redirect(url_for('login'))
+
             login_user(user, remember=form.remember.data)
-            user.last_login = datetime.utcnow()
+            user.last_login = get_malawi_time()
             db.session.commit()
             
             log_system_event('info', 'auth', f'User {user.username} logged in', user.id)
@@ -230,14 +283,19 @@ def register():
             full_name=form.full_name.data,
             phone=form.phone.data,
             role=form.role.data,
-            location=form.location.data
+            location=form.location.data,
+            specific_location=form.specific_location.data,
+            farm_name=form.farm_name.data,
+            animal_types=form.animal_types.data,
+            production_focus=form.production_focus.data,
+            status='pending'
         )
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        
-        log_system_event('info', 'auth', f'New user registered: {user.username}', user.id)
-        flash('Registration successful! Please log in.', 'success')
+
+        log_system_event('info', 'auth', f'New user registered and is awaiting approval: {user.username}', user.id)
+        flash('Registration successful! Your account is awaiting admin approval.', 'info')
         return redirect(url_for('login'))
     
     return render_template('auth/register.html', form=form)
@@ -248,7 +306,7 @@ def logout():
     log_system_event('info', 'auth', f'User {current_user.username} logged out', current_user.id)
     logout_user()
     flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('landing_page'))
 
 @app.route('/dashboard')
 @login_required
@@ -298,21 +356,20 @@ def farmer_dashboard():
 def symptom_form():
     form = SymptomForm()
     if form.validate_on_submit():
+        report_id = generate_report_id()
         selected_symptoms = request.form.getlist('symptoms')
-        free_text_symptoms = form.additional_symptoms.data.strip() if form.additional_symptoms.data else ''
         combined_symptoms = selected_symptoms.copy()
-        if free_text_symptoms:
-            combined_symptoms.append(f'notes:{free_text_symptoms}')
+        animal_label = form.animal_type.data.replace('_', ' ').title()
         
         report = SymptomReport(
-            report_id=generate_report_id(),
+            report_id=report_id,
             farmer_id=current_user.id,
-            animal_id=form.animal_id.data,
-            animal_name=form.animal_name.data or form.animal_id.data,
+            animal_id=report_id,
+            animal_name=f'{animal_label} case',
             animal_type=form.animal_type.data,
             animal_age=form.animal_age.data,
             animal_weight=form.animal_weight.data,
-            animal_breed=form.animal_breed.data,
+            animal_breed=None,
             appetite=form.appetite.data,
             temperature=form.temperature.data,
             heart_rate=form.heart_rate.data,
@@ -438,13 +495,22 @@ def farmer_predictions():
 def farmer_registration():
     form = ProfileForm(obj=current_user)
     if form.validate_on_submit():
+        existing_user = User.query.filter(
+            User.email == form.email.data,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            flash('That email address is already in use by another account.', 'danger')
+            return render_template('farmer/registration.html', form=form)
+
         current_user.full_name = form.full_name.data
         current_user.email = form.email.data
         current_user.phone = form.phone.data
         current_user.farm_name = form.farm_name.data
         current_user.location = form.location.data
-        current_user.farm_size = form.farm_size.data
+        current_user.specific_location = form.specific_location.data
         current_user.animal_types = form.animal_types.data
+        current_user.production_focus = form.production_focus.data
         
         db.session.commit()
         flash('Profile updated successfully!', 'success')
@@ -484,6 +550,69 @@ def vet_dashboard():
                          pending_reviews=pending_reviews,
                          active_treatments=active_treatments,
                          recent_mortality=recent_mortality)
+
+@app.route('/veterinarian/profile', methods=['GET', 'POST'])
+@login_required
+@role_required('veterinarian')
+def vet_profile():
+    form = ProfileForm(obj=current_user)
+
+    if form.validate_on_submit():
+        existing_user = User.query.filter(
+            User.email == form.email.data,
+            User.id != current_user.id
+        ).first()
+        if existing_user:
+            flash('That email address is already in use by another account.', 'danger')
+            return render_template(
+                'veterinarian/profile.html',
+                form=form,
+                assigned_farmers_count=len(get_assigned_farmers(current_user)),
+                pending_reviews=Prediction.query.join(SymptomReport).filter(
+                    SymptomReport.status == 'predicted',
+                    Prediction.review_status == 'pending',
+                    SymptomReport.farmer_id.in_(
+                        [farmer.id for farmer in get_assigned_farmers(current_user)] or [-1]
+                    )
+                ).count(),
+                active_treatments=Treatment.query.filter_by(
+                    vet_id=current_user.id,
+                    status='in_progress'
+                ).count(),
+                mortality_reports_count=MortalityReport.query.filter_by(vet_id=current_user.id).count()
+            )
+
+        current_user.full_name = form.full_name.data
+        current_user.email = form.email.data
+        current_user.phone = form.phone.data
+        current_user.location = form.location.data
+        current_user.specific_location = form.specific_location.data
+
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('vet_profile'))
+
+    assigned_farmer_list = get_assigned_farmers(current_user)
+    assigned_farmer_ids = [farmer.id for farmer in assigned_farmer_list]
+    pending_reviews = Prediction.query.join(SymptomReport).filter(
+        SymptomReport.status == 'predicted',
+        Prediction.review_status == 'pending',
+        SymptomReport.farmer_id.in_(assigned_farmer_ids if assigned_farmer_ids else [-1])
+    ).count()
+    active_treatments = Treatment.query.filter_by(
+        vet_id=current_user.id,
+        status='in_progress'
+    ).count()
+    mortality_reports_count = MortalityReport.query.filter_by(vet_id=current_user.id).count()
+
+    return render_template(
+        'veterinarian/profile.html',
+        form=form,
+        assigned_farmers_count=len(assigned_farmer_list),
+        pending_reviews=pending_reviews,
+        active_treatments=active_treatments,
+        mortality_reports_count=mortality_reports_count
+    )
 
 @app.route('/veterinarian/farmers')
 @login_required
@@ -609,7 +738,7 @@ def mortality_reports():
     # Get statistics
     monthly_count = MortalityReport.query.filter(
         MortalityReport.vet_id == current_user.id,
-        MortalityReport.created_at >= datetime.utcnow() - timedelta(days=30)
+        MortalityReport.created_at >= get_malawi_time() - timedelta(days=30)
     ).count()
     
     return render_template('veterinarian/mortality_reports.html',
@@ -618,6 +747,7 @@ def mortality_reports():
                          monthly_count=monthly_count)
 
 # Organization Admin Routes
+
 @app.route('/organization/dashboard')
 @login_required
 @role_required('organization_admin')
@@ -630,13 +760,120 @@ def org_admin_dashboard():
     
     # Recent activities
     recent_logs = SystemLog.query.order_by(SystemLog.timestamp.desc()).limit(10).all()
-    
+
+    # Location distribution for farmers
+    location_counts = db.session.query(User.location, db.func.count(User.id))\
+        .filter(User.role == 'farmer')\
+        .group_by(User.location).all()
+    location_labels = [l[0] if l[0] else 'Unknown' for l in location_counts]
+    location_values = [l[1] for l in location_counts]
+
     return render_template('organization_admin/dashboard.html',
                          total_farmers=total_farmers,
                          total_veterinarians=total_veterinarians,
                          active_predictions=active_predictions,
                          system_accuracy=system_accuracy,
-                         recent_logs=recent_logs)
+                         recent_logs=recent_logs,
+                         location_labels=location_labels,
+                         location_values=location_values)
+@app.route('/organization/profile')
+@login_required
+@role_required('organization_admin')
+def org_admin_profile():
+    return render_template('organization_admin/my_profile.html')
+
+
+@app.route('/organization/user_management')
+@login_required
+@role_required('organization_admin')
+def org_admin_users():
+    users = User.query.order_by(User.registration_date.desc()).all()
+    total_users = len(users)
+    active_users = sum(1 for user in users if user.is_active)
+    admin_users = sum(1 for user in users if user.role in ['organization_admin', 'system_admin'])
+    users_by_status = {
+        'pending': [user for user in users if user.status == 'pending'],
+        'approved': [user for user in users if user.status == 'approved'],
+        'rejected': [user for user in users if user.status == 'rejected']
+    }
+
+    return render_template('organization_admin/user_management.html',
+                         users=users,
+                         users_by_status=users_by_status,
+                         total_users=total_users,
+                         active_users=active_users,
+                         admin_users=admin_users)
+
+
+@app.route('/organization/users/<int:user_id>/approve', methods=['POST'])
+@login_required
+@role_required('organization_admin')
+def approve_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.is_organization_admin() or user.is_system_admin():
+        flash('Administrator accounts cannot be approved from this panel.', 'warning')
+        return redirect(url_for('org_admin_users'))
+
+    user.status = 'approved'
+    user.approved_at = get_malawi_time()
+    user.rejected_at = None
+    db.session.commit()
+
+    send_approval_email(app, user.email)
+    log_system_event('info', 'auth', f'User approved: {user.username}', current_user.id)
+    flash(f'{user.username} approved successfully.', 'success')
+    return redirect(url_for('org_admin_users'))
+
+
+@app.route('/organization/users/<int:user_id>/reject', methods=['POST'])
+@login_required
+@role_required('organization_admin')
+def reject_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.is_organization_admin() or user.is_system_admin():
+        flash('Administrator accounts cannot be rejected from this panel.', 'warning')
+        return redirect(url_for('org_admin_users'))
+
+    user.status = 'rejected'
+    user.rejected_at = get_malawi_time()
+    user.approved_at = None
+    db.session.commit()
+
+    send_rejection_email(app, user.email)
+    log_system_event('info', 'auth', f'User rejected: {user.username}', current_user.id)
+    flash(f'{user.username} rejected successfully.', 'warning')
+    return redirect(url_for('org_admin_users'))
+
+
+@app.route('/organization/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@role_required('organization_admin')
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('org_admin_users'))
+
+    if user.is_system_admin():
+        flash('System administrator accounts cannot be deleted from this panel.', 'warning')
+        return redirect(url_for('org_admin_users'))
+
+    username = user.username
+    try:
+        db.session.delete(user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash('This user could not be deleted because related records still exist.', 'danger')
+        return redirect(url_for('org_admin_users'))
+
+    log_system_event('warning', 'auth', f'User deleted: {username}', current_user.id)
+    flash(f'{username} deleted successfully.', 'success')
+    return redirect(url_for('org_admin_users'))
+
 
 @app.route('/organization/reports', methods=['GET', 'POST'])
 @login_required
@@ -668,45 +905,6 @@ def org_reports():
                          form=form,
                          reports=reports)
 
-@app.route('/organization/configuration', methods=['GET', 'POST'])
-@login_required
-@role_required('organization_admin')
-def system_config():
-    form = ConfigurationForm()
-    
-    # Load current configuration
-    if request.method == 'GET':
-        # This would load from Configuration table
-        form.system_name.data = app.config['APP_NAME']
-        form.prediction_timeout.data = app.config['PREDICTION_TIMEOUT']
-        form.max_predictions_per_day.data = app.config['MAX_PREDICTIONS_PER_DAY']
-    
-    if form.validate_on_submit():
-        # Save configuration (simulated - would save to Configuration table)
-        flash('System configuration updated successfully!', 'success')
-        return redirect(url_for('system_config'))
-    
-    return render_template('organization_admin/system_config.html', form=form)
-
-@app.route('/organization/model-management')
-@login_required
-@role_required('organization_admin')
-def model_management():
-    # Get model versions
-    model_versions = ModelVersion.query.order_by(ModelVersion.created_at.desc()).all()
-    
-    # Get performance metrics
-    performance_data = {
-        'current_accuracy': 0.892,
-        'training_data_size': 45230,
-        'monthly_predictions': 12400,
-        'accuracy_trend': 'up'
-    }
-    
-    return render_template('organization_admin/model_management.html',
-                         model_versions=model_versions,
-                         performance_data=performance_data)
-
 # System Admin Routes
 @app.route('/system/dashboard')
 @login_required
@@ -714,15 +912,14 @@ def model_management():
 def sys_admin_dashboard():
     # System health metrics
     uptime = 0.998  # This would come from monitoring system
-    active_users = User.query.filter(User.last_login >= datetime.utcnow() - timedelta(hours=1)).count()
+    active_users = User.query.filter(User.last_login >= get_malawi_time() - timedelta(hours=1)).count()
     api_requests = 12400  # Simulated
-    
+
     # System alerts
     system_alerts = SystemLog.query.filter(
         SystemLog.level.in_(['error', 'critical']),
-        SystemLog.timestamp >= datetime.utcnow() - timedelta(days=1)
-    ).order_by(SystemLog.timestamp.desc()).limit(5).all()
-    
+        SystemLog.timestamp >= get_malawi_time() - timedelta(days=1)
+    ).order_by(SystemLog.timestamp.desc()).limit(5).all()    
     # Component status (simulated)
     component_status = {
         'web_server': 'running',
@@ -750,15 +947,15 @@ def system_logs():
     
     # Calculate time filter
     if time_range == '1h':
-        time_filter = datetime.utcnow() - timedelta(hours=1)
+        time_filter = get_malawi_time() - timedelta(hours=1)
     elif time_range == '24h':
-        time_filter = datetime.utcnow() - timedelta(days=1)
+        time_filter = get_malawi_time() - timedelta(days=1)
     elif time_range == '7d':
-        time_filter = datetime.utcnow() - timedelta(days=7)
+        time_filter = get_malawi_time() - timedelta(days=7)
     elif time_range == '30d':
-        time_filter = datetime.utcnow() - timedelta(days=30)
+        time_filter = get_malawi_time() - timedelta(days=30)
     else:
-        time_filter = datetime.utcnow() - timedelta(days=1)
+        time_filter = get_malawi_time() - timedelta(days=1)
     
     # Build query
     query = SystemLog.query.filter(SystemLog.timestamp >= time_filter)
@@ -860,7 +1057,7 @@ def review_prediction(prediction_id):
         prediction.review_status = 'confirmed'
         prediction.review_notes = notes
         prediction.reviewed_by = current_user.id
-        prediction.reviewed_at = datetime.utcnow()
+        prediction.reviewed_at = get_malawi_time()
         
         # Create treatment suggestion
         treatment = Treatment(
@@ -895,7 +1092,7 @@ def review_prediction(prediction_id):
         prediction.review_status = 'modified'
         prediction.review_notes = notes
         prediction.reviewed_by = current_user.id
-        prediction.reviewed_at = datetime.utcnow()
+        prediction.reviewed_at = get_malawi_time()
         
         flash('Prediction modified successfully!', 'success')
     

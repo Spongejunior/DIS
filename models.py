@@ -1,8 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 import json
+
+def get_malawi_time():
+    return datetime.now(timezone(timedelta(hours=2)))
 
 db = SQLAlchemy()
 
@@ -10,7 +13,7 @@ db = SQLAlchemy()
 farmer_veterinarian = db.Table('farmer_veterinarian',
     db.Column('farmer_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('veterinarian_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('assigned_date', db.DateTime, default=datetime.utcnow)
+    db.Column('assigned_date', db.DateTime, default=get_malawi_time)
 )
 
 class User(UserMixin, db.Model):
@@ -24,12 +27,16 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20))
     role = db.Column(db.String(20), nullable=False)  # farmer, veterinarian, organization_admin, system_admin
     location = db.Column(db.String(200))
+    specific_location = db.Column(db.String(200))
     farm_name = db.Column(db.String(100))
-    farm_size = db.Column(db.String(50))
     animal_types = db.Column(db.String(200))  # Will be 'cattle', 'goat', or 'cattle,goat'
-    registration_date = db.Column(db.DateTime, default=datetime.utcnow)
+    production_focus = db.Column(db.String(50))  # dairy, meat, dual, breeding
+    registration_date = db.Column(db.DateTime, default=get_malawi_time)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected
+    approved_at = db.Column(db.DateTime)
+    rejected_at = db.Column(db.DateTime)
     
     # Relationships
     symptoms = db.relationship('SymptomReport', backref='farmer', foreign_keys='SymptomReport.farmer_id')
@@ -62,6 +69,9 @@ class User(UserMixin, db.Model):
     
     def is_system_admin(self):
         return self.role == 'system_admin'
+
+    def is_approved_user(self):
+        return self.status == 'approved'
     
     def get_animal_types_list(self):
         if self.animal_types:
@@ -99,8 +109,8 @@ class SymptomReport(db.Model):
     
     # Status
     status = db.Column(db.String(20), default='pending')  # pending, processing, predicted, reviewed, resolved
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
+    updated_at = db.Column(db.DateTime, default=get_malawi_time, onupdate=get_malawi_time)
     
     # Relationships
     prediction = db.relationship('Prediction', backref='symptom_report', uselist=False)
@@ -132,7 +142,7 @@ class Prediction(db.Model):
     disease_category = db.Column(db.String(50))  # respiratory, parasitic, nutritional, metabolic, other
     confidence = db.Column(db.Float)  # 0.0 to 1.0
     severity = db.Column(db.String(20))  # mild, moderate, severe, critical
-    predicted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    predicted_at = db.Column(db.DateTime, default=get_malawi_time)
     
     # Common cattle/goat diseases
     possible_diseases = db.Column(db.Text)  # JSON list of possible diseases with probabilities
@@ -176,7 +186,7 @@ class Treatment(db.Model):
     
     # Status
     status = db.Column(db.String(20), default='prescribed')  # prescribed, in_progress, completed, cancelled
-    prescribed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    prescribed_at = db.Column(db.DateTime, default=get_malawi_time)
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     
@@ -219,7 +229,7 @@ class MortalityReport(db.Model):
     requires_investigation = db.Column(db.Boolean, default=False)
     investigation_notes = db.Column(db.Text)
     lab_results = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
 
 class DiseaseLibrary(db.Model):
     __tablename__ = 'disease_library'
@@ -245,8 +255,8 @@ class DiseaseLibrary(db.Model):
     economic_impact = db.Column(db.String(50))  # low, medium, high
     zoonotic = db.Column(db.Boolean, default=False)  # Can spread to humans
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
+    updated_at = db.Column(db.DateTime, default=get_malawi_time, onupdate=get_malawi_time)
 
 class BreedingRecord(db.Model):
     __tablename__ = 'breeding_record'
@@ -273,14 +283,14 @@ class BreedingRecord(db.Model):
     offspring_health = db.Column(db.String(50))
     notes = db.Column(db.Text)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
 
 # Other models remain the same as before...
 class SystemLog(db.Model):
     __tablename__ = 'system_log'
     
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    timestamp = db.Column(db.DateTime, default=get_malawi_time, index=True)
     level = db.Column(db.String(20))  # info, warning, error, critical, debug
     component = db.Column(db.String(50))  # web, api, db, model, auth, notification
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -297,7 +307,7 @@ class PerformanceMetric(db.Model):
     value = db.Column(db.Float)
     target_value = db.Column(db.Float)
     unit = db.Column(db.String(20))
-    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    recorded_at = db.Column(db.DateTime, default=get_malawi_time)
 
 class ModelVersion(db.Model):
     __tablename__ = 'model_version'
@@ -313,7 +323,7 @@ class ModelVersion(db.Model):
     hyperparameters = db.Column(db.Text)  # JSON string
     performance_metrics = db.Column(db.Text)  # JSON string
     animal_types = db.Column(db.String(50))  # cattle, goat, both
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
 
 class Report(db.Model):
     __tablename__ = 'report'
@@ -324,7 +334,7 @@ class Report(db.Model):
     period_start = db.Column(db.Date)
     period_end = db.Column(db.Date)
     generated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    generated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    generated_at = db.Column(db.DateTime, default=get_malawi_time)
     file_path = db.Column(db.String(200))
     file_size = db.Column(db.Integer)
     data_points = db.Column(db.Text)  # JSON string of included data
@@ -341,7 +351,7 @@ class Notification(db.Model):
     message = db.Column(db.Text)
     priority = db.Column(db.String(20))  # low, medium, high, critical
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_malawi_time)
     action_url = db.Column(db.String(200))
     related_id = db.Column(db.Integer)  # ID of related entity
 
@@ -354,5 +364,5 @@ class Configuration(db.Model):
     value = db.Column(db.Text)
     data_type = db.Column(db.String(20))  # string, integer, float, boolean, json
     description = db.Column(db.Text)
-    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_modified = db.Column(db.DateTime, default=get_malawi_time, onupdate=get_malawi_time)
     modified_by = db.Column(db.Integer, db.ForeignKey('user.id'))

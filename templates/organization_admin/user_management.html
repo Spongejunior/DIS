@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - Animal Health System{% endblock %}
+
+{% block sidebar %}
+{% set active_page = 'users' %}
+{% include "organization_admin/_sidebar.html" %}
+{% endblock %}
+
+{% macro user_status_badge(status) -%}
+    {% if status == 'approved' %}
+        <span class="badge bg-success">Approved</span>
+    {% elif status == 'rejected' %}
+        <span class="badge bg-danger">Rejected</span>
+    {% else %}
+        <span class="badge bg-warning text-dark">Pending</span>
+    {% endif %}
+{%- endmacro %}
+
+{% macro user_table(title, users, empty_message) -%}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ title }}</h5>
+        <span class="badge bg-light text-dark">{{ users|length }} users</span>
+    </div>
+    <div class="card-body">
+        {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Email</th>
+                            <th>Registered</th>
+                            <th>Status</th>
+                            <th>Reviewed</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ user.full_name or user.username }}</div>
+                                    <div class="small text-muted">@{{ user.username }}</div>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ user.role.replace('_', ' ') }}</span></td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.registration_date.strftime('%d %b %Y %H:%M') if user.registration_date else 'N/A' }}</td>
+                                <td>{{ user_status_badge(user.status) }}</td>
+                                <td>
+                                    {% if user.approved_at %}
+                                        <small class="text-success">Approved {{ user.approved_at.strftime('%d %b %Y %H:%M') }}</small>
+                                    {% elif user.rejected_at %}
+                                        <small class="text-danger">Rejected {{ user.rejected_at.strftime('%d %b %Y %H:%M') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Awaiting review</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                                        {% if user.status != 'approved' and user.role not in ['organization_admin', 'system_admin'] %}
+                                            <form method="POST" action="{{ url_for('approve_user', user_id=user.id) }}">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle"></i> Approve
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
+                                        {% if user.status != 'rejected' and user.role not in ['organization_admin', 'system_admin'] %}
+                                            <form method="POST" action="{{ url_for('reject_user', user_id=user.id) }}">
+                                                <button type="submit" class="btn btn-sm btn-warning">
+                                                    <i class="bi bi-x-circle"></i> Reject
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
+                                        {% if user.id != current_user.id and user.role != 'system_admin' %}
+                                            <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('Delete {{ user.username }} permanently?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-primary mb-0">{{ empty_message }}</div>
+        {% endif %}
+    </div>
+</div>
+{%- endmacro %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-person-check"></i> User Approval Dashboard</h2>
+        <p class="text-muted mb-0">Review registrations, approve access, reject requests, and remove accounts when needed.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('org_admin_profile') }}" class="btn btn-outline-primary">
+            <i class="bi bi-person"></i> My Profile
+        </a>
+        <a href="{{ url_for('org_reports') }}" class="btn btn-primary">
+            <i class="bi bi-file-earmark-bar-graph"></i> Reports
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <h6 class="card-title">Total Users</h6>
+                <h2 class="mb-1">{{ total_users }}</h2>
+                <small>All registered accounts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <h6 class="card-title">Pending Approval</h6>
+                <h2 class="mb-1">{{ users_by_status.pending|length }}</h2>
+                <small>Waiting for admin review</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <h6 class="card-title">Approved</h6>
+                <h2 class="mb-1">{{ users_by_status.approved|length }}</h2>
+                <small>Allowed to log in</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body">
+                <h6 class="card-title">Rejected</h6>
+                <h2 class="mb-1">{{ users_by_status.rejected|length }}</h2>
+                <small>Declined registrations</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ user_table('Pending Users', users_by_status.pending, 'There are no users waiting for approval right now.') }}
+{{ user_table('Approved Users', users_by_status.approved, 'There are no approved users yet.') }}
+{{ user_table('Rejected Users', users_by_status.rejected, 'There are no rejected users.') }}
+{% endblock %}

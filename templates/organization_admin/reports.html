@@ -3,20 +3,8 @@
 {% block title %}Reports & Analytics - Animal Health System{% endblock %}
 
 {% block sidebar %}
-<nav class="nav flex-column">
-    <a class="nav-link" href="{{ url_for('org_admin_dashboard') }}">
-        <i class="bi bi-house-door"></i> Dashboard
-    </a>
-    <a class="nav-link active" href="{{ url_for('org_reports') }}">
-        <i class="bi bi-bar-chart"></i> Reports & Analytics
-    </a>
-    <a class="nav-link" href="{{ url_for('system_config') }}">
-        <i class="bi bi-gear"></i> System Configuration
-    </a>
-    <a class="nav-link" href="{{ url_for('model_management') }}">
-        <i class="bi bi-cpu"></i> Model Management
-    </a>
-</nav>
+{% set active_page = 'reports' %}
+{% include "organization_admin/_sidebar.html" %}
 {% endblock %}
 
 {% block content %}

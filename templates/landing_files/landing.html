@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChiwetoCare - Disease Identification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="landing-shell">
+        <header class="site-header">
+            <div class="brand">
+                <div class="brand-mark">
+                    <i class="fa-solid fa-cow"></i>
+                </div>
+                <div>
+                    <h1>ChiwetoCare</h1>
+                    <p>AI support for healthier livestock</p>
+                </div>
+            </div>
+
+            <nav class="site-nav" aria-label="Primary">
+                <a href="#features">Features</a>
+                <a href="#impact">Impact</a>
+                <a href="#about">About</a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="{{ url_for('login') }}" class="btn btn-outline">Login</a>
+                <a href="{{ url_for('register') }}" class="btn btn-primary">Sign Up</a>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero-section">
+                <div class="hero-copy">
+                    <span class="eyebrow">Smart disease support for cattle and goats</span>
+                    <h2>Spot symptoms earlier and act faster with practical AI guidance.</h2>
+                    <p>
+                        ChiwetoCare helps farmers, veterinarians, and administrators work from the same platform to
+                        identify livestock illness, review predictions, and respond with more confidence.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-soft">Open Dashboard</a>
+                    </div>
+
+                    <div class="hero-highlights">
+                        <div class="highlight-chip">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Fast symptom reporting</span>
+                        </div>
+                        <div class="highlight-chip">
+                            <i class="fa-solid fa-stethoscope"></i>
+                            <span>Vet review workflow</span>
+                        </div>
+                        <div class="highlight-chip">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                            <span>Works across devices</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="hero-card hero-card-main">
+                        <img src="{{ url_for('static', filename='images/landing_pic.jpg') }}" alt="Healthy livestock">
+                    </div>
+                    <div class="hero-card hero-card-floating">
+                        <p class="metric-label">Average response flow</p>
+                        <div class="metric-row">
+                            <strong>Report</strong>
+                            <span>Review</span>
+                            <strong>Treat</strong>
+                        </div>
+                        <div class="metric-bar">
+                            <span></span>
+                        </div>
+                        <small>Designed for farm-to-vet coordination.</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="feature-section" id="features">
+                <div class="section-heading">
+                    <span class="eyebrow">What the platform helps you do</span>
+                    <h3>Built for daily livestock care, not just demos.</h3>
+                </div>
+
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-brain"></i></div>
+                        <h4>AI-powered prediction support</h4>
+                        <p>Capture symptoms and receive structured disease predictions that help users prioritize the next step.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-user-doctor"></i></div>
+                        <h4>Veterinary collaboration</h4>
+                        <p>Enable veterinarians to review cases, suggest treatment, and follow up with mapped farmers.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h4>Operational visibility</h4>
+                        <p>Give administrators dashboards and reporting views that show user activity and prediction workload.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="impact-section" id="impact">
+                <div class="impact-card">
+                    <div class="section-heading section-heading-light">
+                        <span class="eyebrow">Why teams choose ChiwetoCare</span>
+                        <h3>A simpler path from symptoms to action.</h3>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-tile">
+                            <strong>24/7</strong>
+                            <span>Platform availability for field access</span>
+                        </div>
+                        <div class="stat-tile">
+                            <strong>Role-based</strong>
+                            <span>Farmer, vet, and admin workflows</span>
+                        </div>
+                        <div class="stat-tile">
+                            <strong>Faster</strong>
+                            <span>Case review and treatment coordination</span>
+                        </div>
+                        <div class="stat-tile">
+                            <strong>Mobile-ready</strong>
+                            <span>Responsive access from smaller screens</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer" id="about">
+            <div class="footer-grid">
+                <div>
+                    <h3>ChiwetoCare</h3>
+                    <p>
+                        A livestock disease support platform focused on practical decision support for farmers and animal-health teams.
+                    </p>
+                </div>
+                <div>
+                    <h4>Explore</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#impact">Impact</a></li>
+                        <li><a href="{{ url_for('login') }}">Login</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contact</h4>
+                    <ul>
+                        <li><i class="fa-solid fa-envelope"></i> support@chiwetocare.ai</li>
+                        <li><i class="fa-solid fa-phone"></i> +265 999 231 915</li>
+                        <li><i class="fa-solid fa-location-dot"></i> Luwinga, Mzuzu City</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 ChiwetoCare. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

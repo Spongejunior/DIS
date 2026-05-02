@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Organization Admin Dashboard - Animal Health System{% endblock %}
+
+{% block sidebar %}
+{% set active_page = 'dashboard' %}
+{% include "organization_admin/_sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1"><i class="bi bi-speedometer2"></i> Organization Admin Dashboard</h2>
+        <p class="text-muted mb-0">Monitor user activity, predictions, and core system health from one place.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('org_reports') }}" class="btn btn-outline-primary">
+            <i class="bi bi-bar-chart"></i> View Reports
+        </a>
+        <a href="{{ url_for('org_admin_users') }}" class="btn btn-primary">
+            <i class="bi bi-people"></i> Manage Users
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card text-white bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Farmers</h6>
+                        <h2 class="mb-1">{{ total_farmers }}</h2>
+                        <small>Registered farmer accounts</small>
+                    </div>
+                    <i class="bi bi-person-hearts" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card text-white bg-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Veterinarians</h6>
+                        <h2 class="mb-1">{{ total_veterinarians }}</h2>
+                        <small>Active veterinary users</small>
+                    </div>
+                    <i class="bi bi-shield-plus" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card text-white bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Active Predictions</h6>
+                        <h2 class="mb-1">{{ active_predictions }}</h2>
+                        <small>Awaiting follow-up or review</small>
+                    </div>
+                    <i class="bi bi-activity" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card text-white bg-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">System Accuracy</h6>
+                        <h2 class="mb-1">{{ "%.1f"|format(system_accuracy * 100) }}%</h2>
+                        <small>Latest tracked prediction accuracy</small>
+                    </div>
+                    <i class="bi bi-graph-up-arrow" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Farmer Distribution (Mzuzu Areas)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="locationChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Operational Snapshot</h5>
+                <span class="badge bg-light text-dark">{{ current_user.username }}</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Prediction accuracy</span>
+                        <strong>{{ "%.1f"|format(system_accuracy * 100) }}%</strong>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ "%.0f"|format(system_accuracy * 100) }}%"></div>
+                    </div>
+                </div>
+                <div class="row text-center g-3">
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100">
+                            <div class="text-muted small mb-1">Users Monitored</div>
+                            <div class="fs-4 fw-bold">{{ total_farmers + total_veterinarians }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100">
+                            <div class="text-muted small mb-1">Recent Logs</div>
+                            <div class="fs-4 fw-bold">{{ recent_logs|length }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100">
+                            <div class="text-muted small mb-1">Review Focus</div>
+                            <div class="fs-4 fw-bold">{{ active_predictions }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('org_admin_profile') }}" class="btn btn-outline-secondary w-100 quick-action-btn">
+                            <i class="bi bi-person-badge"></i> Open Profile
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('org_admin_users') }}" class="btn btn-outline-secondary w-100 quick-action-btn">
+                            <i class="bi bi-people"></i> Review Users
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('org_reports') }}" class="btn btn-outline-primary w-100 quick-action-btn">
+                            <i class="bi bi-file-earmark-bar-graph"></i> Analytics Reports
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('org_admin_dashboard') }}" class="btn btn-outline-primary w-100 quick-action-btn">
+                            <i class="bi bi-arrow-repeat"></i> Refresh Overview
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Recent System Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                    <div class="list-group list-group-flush">
+                        {% for log in recent_logs %}
+                            <div class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <div class="fw-semibold text-capitalize">{{ log.component or 'system' }}</div>
+                                        <div class="small text-muted">{{ log.message }}</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-{% if log.level == 'critical' %}danger{% elif log.level == 'error' %}danger{% elif log.level == 'warning' %}warning text-dark{% else %}success{% endif %} text-uppercase">
+                                            {{ log.level or 'info' }}
+                                        </span>
+                                        <div class="small text-muted mt-1">{{ log.timestamp.strftime('%d %b %Y %H:%M') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-primary mb-0">
+                        No recent system logs are available yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('locationChart').getContext('2d');
+    const locationChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ location_labels|tojson }},
+            datasets: [{
+                label: 'Number of Farmers',
+                data: {{ location_values|tojson }},
+                backgroundColor: 'rgba(26, 74, 46, 0.7)',
+                borderColor: 'rgba(26, 74, 46, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

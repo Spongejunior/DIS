@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Register - ChiwetoCare{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-shell">
+        <div class="card auth-card auth-card-register border-0 shadow-lg bg-white">
+            <div class="p-4 p-md-5">
+                <div class="mb-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-plus-fill fs-1 text-primary"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Create your account</h3>
+                    <p class="text-muted small mb-0">New accounts require admin approval before full access.</p>
+                </div>
+
+                <div class="auth-tip small text-muted mb-4">
+                                Use your real name, active phone number and location.
+                </div>
+
+                <form method="POST" action="{{ url_for('register') }}" novalidate autocomplete="off">
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.full_name.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.full_name(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                            <div class="form-text">Enter your first and last name.</div>
+                            {% for error in form.full_name.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.email.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.email(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                            <div class="form-text">Use an email you can access.</div>
+                            {% for error in form.email.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            {{ form.username.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.username(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                            <div class="form-text">Pick a simple username for login.</div>
+                            {% for error in form.username.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.phone.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.phone(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                            <div class="form-text">Malawi mobile number is best.</div>
+                            {% for error in form.phone.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            {{ form.password.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.password(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="new-password") }}
+                            <div class="form-text">Mix letters and numbers if possible.</div>
+                            {% for error in form.password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.confirm_password.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.confirm_password(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="new-password") }}
+                            <div class="form-text">Must match the password above.</div>
+                            {% for error in form.confirm_password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            {{ form.role.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.role(class="form-select border-0 bg-light py-2", id="role-select", autocomplete="off") }}
+                            <div class="form-text">Choose whether you are a farmer or veterinarian.</div>
+                            {% for error in form.role.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.location.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.location(class="form-select border-0 bg-light py-2", autocomplete="off") }}
+                            <div class="form-text">Pick the main area in Mzuzu.</div>
+                            {% for error in form.location.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.specific_location.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.specific_location(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                            <div class="form-text">Add a village, street, landmark, block, or trading centre.</div>
+                            {% for error in form.specific_location.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div id="farmer-fields" style="display: none;" class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                {{ form.farm_name.label(class="form-label small fw-bold text-muted") }}
+                                {{ form.farm_name(class="form-control border-0 bg-light py-2", placeholder="", autocomplete="off") }}
+                                <div class="form-text">Only for farmer accounts.</div>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.animal_types.label(class="form-label small fw-bold text-muted") }}
+                                {{ form.animal_types(class="form-select border-0 bg-light py-2", autocomplete="off") }}
+                                <div class="form-text">Choose the animals you mainly keep.</div>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.production_focus.label(class="form-label small fw-bold text-muted") }}
+                                {{ form.production_focus(class="form-select border-0 bg-light py-2", autocomplete="off") }}
+                                <div class="form-text">Example: dairy, meat, or breeding.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        {{ form.submit(class="btn btn-primary py-2 fw-bold") }}
+                    </div>
+                </form>
+
+                <div class="mt-4 pt-3 border-top text-center">
+                    <p class="text-muted small mb-0">Already have an account? <a href="{{ url_for('login') }}" class="text-primary fw-bold text-decoration-none">Sign In</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelect = document.getElementById('role-select');
+        const farmerFields = document.getElementById('farmer-fields');
+
+        function toggleFarmerFields() {
+            if (roleSelect.value === 'farmer') {
+                farmerFields.style.display = 'flex';
+            } else {
+                farmerFields.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleFarmerFields);
+        toggleFarmerFields();
+    });
+</script>
+{% endblock %}

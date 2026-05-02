@@ -81,27 +81,27 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label"><strong>Full Name</strong></label>
-                        <p>John Farmer</p>
+                        <p>{{ current_user.full_name or 'Not provided' }}</p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><strong>Email Address</strong></label>
-                        <p>john.farmer@example.com</p>
+                        <p>{{ current_user.email }}</p>
                     </div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label"><strong>Phone Number</strong></label>
-                        <p>+1 (555) 123-4567</p>
+                        <p>{{ current_user.phone or 'Not provided' }}</p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><strong>Registration Date</strong></label>
-                        <p>March 15, 2023</p>
+                        <p>{{ current_user.registration_date.strftime('%B %d, %Y') }}</p>
                     </div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <label class="form-label"><strong>Farm Address/Location</strong></label>
-                        <p>123 Farm Road, Agricultural District, Countryside, ST 12345</p>
+                        <p>{{ current_user.location or 'Not provided' }}</p>
                     </div>
                 </div>
             </div>
@@ -114,32 +114,45 @@
             </div>
             <div class="card-body">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label class="form-label"><strong>Farm Name</strong></label>
-                        <p>Green Valley Farm</p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>Farm Size</strong></label>
-                        <p>50 acres</p>
+                        <p>{{ current_user.farm_name or 'Not provided' }}</p>
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label"><strong>Primary Animal Types</strong></label>
                         <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-secondary">Cattle</span>
-                            <span class="badge bg-secondary">Poultry</span>
-                            <span class="badge bg-secondary">Goats</span>
+                            {% if current_user.animal_types %}
+                                {% for atype in current_user.animal_types.split(',') %}
+                                    <span class="badge bg-secondary text-capitalize">{{ atype }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">None specified</span>
+                            {% endif %}
                         </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><strong>Production Focus</strong></label>
+                        <p class="text-capitalize">{{ current_user.production_focus or 'Not provided' }}</p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-12">
-                        <label class="form-label"><strong>Assigned Veterinarian</strong></label>
-                        <div class="alert alert-info py-2">
-                            <i class="bi bi-person-heart"></i> <strong>Dr. Sarah Smith</strong><br>
-                            <small>Phone: +1 (555) 987-6543 | Email: dr.smith@vetclinic.com</small>
-                        </div>
+                        <label class="form-label"><strong>Assigned Veterinarians</strong></label>
+                        {% set vets = current_user.assigned_veterinarians.all() %}
+                        {% if vets %}
+                            {% for vet in vets %}
+                                <div class="alert alert-info py-2 mb-2">
+                                    <i class="bi bi-person-heart"></i> <strong>{{ vet.full_name }}</strong><br>
+                                    <small>Phone: {{ vet.phone or 'N/A' }} | Email: {{ vet.email }}</small>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-light py-2 border">
+                                <small class="text-muted">No veterinarian assigned yet.</small>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -178,57 +191,49 @@
                 <h5 class="modal-title">Edit Profile</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <form>
+            <form method="POST" action="{{ url_for('farmer_registration') }}">
+                {{ form.hidden_tag() }}
+                <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" class="form-control" value="John Farmer">
+                            {{ form.full_name.label(class="form-label") }}
+                            {{ form.full_name(class="form-control") }}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" value="john.farmer@example.com">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control") }}
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" value="+1 (555) 123-4567">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control") }}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Farm Name</label>
-                            <input type="text" class="form-control" value="Green Valley Farm">
+                            {{ form.farm_name.label(class="form-label") }}
+                            {{ form.farm_name(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.animal_types.label(class="form-label") }}
+                            {{ form.animal_types(class="form-select") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.production_focus.label(class="form-label") }}
+                            {{ form.production_focus(class="form-select") }}
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Farm Address</label>
-                        <textarea class="form-control" rows="3">123 Farm Road, Agricultural District, Countryside, ST 12345</textarea>
+                        {{ form.location.label(class="form-label") }}
+                        {{ form.location(class="form-control", rows="3") }}
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Primary Animal Types</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="cattle" checked>
-                            <label class="form-check-label" for="cattle">Cattle</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="poultry" checked>
-                            <label class="form-check-label" for="poultry">Poultry</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="goats" checked>
-                            <label class="form-check-label" for="goats">Goats</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="sheep">
-                            <label class="form-check-label" for="sheep">Sheep</label>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Save Changes</button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
         </div>
     </div>
 </div>

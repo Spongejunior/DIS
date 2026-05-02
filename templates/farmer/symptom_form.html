@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Report Symptoms - ChiwetoCare{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('farmer_dashboard') }}">
+        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+    </a>
+    <a class="nav-link active" href="{{ url_for('symptom_form') }}">
+        <i class="bi bi-clipboard-plus-fill"></i> Report Symptoms
+    </a>
+    <a class="nav-link" href="{{ url_for('symptom_history') }}">
+        <i class="bi bi-clock-history"></i> History
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_predictions') }}">
+        <i class="bi bi-graph-up-arrow"></i> Predictions
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_registration') }}">
+        <i class="bi bi-person-fill-gear"></i> Profile
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-tight py-4" style="max-width: 800px; margin: 0 auto;">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">Report Animal Symptoms</h3>
+        <p class="text-muted">Fill in the details below to receive an AI-powered health prediction.</p>
+    </div>
+
+    <!-- Stepper -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between position-relative">
+                <div class="step-item text-center active" id="step1-indicator" style="z-index: 2; width: 120px;">
+                    <div class="step-circle mx-auto mb-2 d-flex align-items-center justify-content-center fw-bold">1</div>
+                    <div class="small fw-bold">Animal Info</div>
+                </div>
+                <div class="step-item text-center" id="step2-indicator" style="z-index: 2; width: 120px;">
+                    <div class="step-circle mx-auto mb-2 d-flex align-items-center justify-content-center fw-bold">2</div>
+                    <div class="small fw-bold">Symptoms</div>
+                </div>
+                <div class="step-item text-center" id="step3-indicator" style="z-index: 2; width: 120px;">
+                    <div class="step-circle mx-auto mb-2 d-flex align-items-center justify-content-center fw-bold">3</div>
+                    <div class="small fw-bold">Review</div>
+                </div>
+                <!-- Progress Line -->
+                <div class="position-absolute top-50 start-0 translate-middle-y w-100 bg-light" style="height: 2px; z-index: 1;">
+                    <div id="step-progress" class="bg-primary h-100 transition-all" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('symptom_form') }}" id="symptomForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Step 1: Animal Info -->
+        <div class="step-content" id="step1">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">Animal Details</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.animal_type.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.animal_type(class="form-select border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.animal_age.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.animal_age(class="form-control border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.animal_weight.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.animal_weight(class="form-control border-0 bg-light py-2") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 p-4 pt-0 text-end">
+                    <button type="button" class="btn btn-primary px-4 py-2" onclick="nextStep(2)">
+                        Next: Symptoms <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Symptoms -->
+        <div class="step-content d-none" id="step2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">Select Observed Symptoms</h5>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted d-block mb-3">Vital Signs</label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                {{ form.appetite.label(class="form-label small") }}
+                                {{ form.appetite(class="form-select border-0 bg-light") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.temperature.label(class="form-label small") }}
+                                {{ form.temperature(class="form-control border-0 bg-light", placeholder="°C") }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.rumen_movement.label(class="form-label small") }}
+                                {{ form.rumen_movement(class="form-select border-0 bg-light") }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted d-block mb-3">Common Signs</label>
+                        <div class="row g-3" id="symptomGrid">
+                            {% set common_symptoms = [
+                                "Fever","Loss of appetite","Weight loss","Lethargy",
+                                "Coughing","Sneezing","Nasal discharge","Eye discharge",
+                                "Labored breathing","Rapid breathing","Diarrhea","Bloody diarrhea",
+                                "Lameness","Swollen lymph nodes"
+                            ] %}
+
+                            {% for s in common_symptoms %}
+                            <div class="col-md-4">
+                                <div class="symptom-tag-card p-2 rounded-3 text-center border cursor-pointer transition-all small fw-medium" 
+                                     onclick="toggleSymptom(this)" data-value="{{ s }}">
+                                    {{ s }}
+                                    <input type="checkbox" name="symptoms" value="{{ s }}" class="d-none">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div>
+                <div class="card-footer bg-white border-0 p-4 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light px-4 py-2" onclick="prevStep(1)">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </button>
+                    <button type="button" class="btn btn-primary px-4 py-2" onclick="nextStep(3)">
+                        Next: Review <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="step-content d-none" id="step3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">Review Your Report</h5>
+                    
+                    <div class="bg-light rounded-4 p-4 mb-4">
+                        <div class="row g-4">
+                            <div class="col-6">
+                                <div class="small text-muted mb-1">Specie</div>
+                                <div class="fw-bold text-capitalize" id="review-type">--</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="small text-muted mb-1">Selected Symptoms</div>
+                                <div class="d-flex flex-wrap gap-2 mt-2" id="review-symptoms">
+                                    <span class="text-muted small italic">None selected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-primary d-flex align-items-center border-0 small">
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        By submitting, our AI will analyze these symptoms against thousands of veterinary records to provide a prediction.
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 p-4 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light px-4 py-2" onclick="prevStep(2)">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </button>
+                    <button type="submit" class="btn btn-success px-5 py-2 fw-bold shadow-sm">
+                        Submit & Predict <i class="bi bi-magic ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+.step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #e2e8f0;
+    color: #94a3b8;
+    transition: all 0.3s ease;
+}
+.step-item.active .step-circle {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(44, 119, 68, 0.15);
+}
+.step-item.completed .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+.transition-all {
+    transition: all 0.4s ease;
+}
+.symptom-tag-card {
+    background: white;
+    cursor: pointer;
+    border-color: #f1f5f9;
+}
+.symptom-tag-card:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+.symptom-tag-card.active {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #065f46;
+}
+.cursor-pointer {
+    cursor: pointer;
+}
+</style>
+
+<script>
+function nextStep(step) {
+    // Basic validation for Step 1
+    if (step === 2) {
+        const animalType = document.querySelector('select[name="animal_type"]').value;
+        if (!animalType) {
+            alert('Please select a specie.');
+            return;
+        }
+    }
+
+    document.querySelectorAll('.step-content').forEach(el => el.classList.add('d-none'));
+    document.getElementById('step' + step).classList.remove('d-none');
+
+    document.querySelectorAll('.step-item').forEach((el, idx) => {
+        if (idx + 1 < step) el.classList.add('completed');
+        else el.classList.remove('completed');
+        
+        if (idx + 1 === step) el.classList.add('active');
+        else el.classList.remove('active');
+    });
+
+    // Update progress bar
+    const progress = ((step - 1) / 2) * 100;
+    document.getElementById('step-progress').style.width = progress + '%';
+
+    if (step === 3) populateReview();
+    window.scrollTo(0, 0);
+}
+
+function prevStep(step) {
+    nextStep(step);
+}
+
+function toggleSymptom(card) {
+    card.classList.toggle('active');
+    const checkbox = card.querySelector('input');
+    checkbox.checked = !checkbox.checked;
+}
+
+function populateReview() {
+    const type = document.querySelector('select[name="animal_type"]').value;
+    
+    document.getElementById('review-type').textContent = type;
+    
+    const selectedSymptoms = [...document.querySelectorAll('input[name="symptoms"]:checked')].map(el => el.value);
+    const container = document.getElementById('review-symptoms');
+    container.innerHTML = '';
+    
+    if (selectedSymptoms.length > 0) {
+        selectedSymptoms.forEach(s => {
+            const span = document.createElement('span');
+            span.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill';
+            span.textContent = s;
+            container.appendChild(span);
+        });
+    } else {
+        container.innerHTML = '<span class="text-muted small italic">None selected</span>';
+    }
+}
+</script>
+{% endblock %}

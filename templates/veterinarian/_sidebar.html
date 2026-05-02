@@ -1,0 +1,20 @@
+<nav class="nav flex-column">
+    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('vet_dashboard') }}">
+        <i class="bi bi-house-door"></i> Dashboard
+    </a>
+    <a class="nav-link {% if active_page == 'farmers' %}active{% endif %}" href="{{ url_for('farmer_mapping') }}">
+        <i class="bi bi-people"></i> Farmer Mapping
+    </a>
+    <a class="nav-link {% if active_page == 'reviews' %}active{% endif %}" href="{{ url_for('predictions_review') }}">
+        <i class="bi bi-clipboard-check"></i> Review Predictions
+    </a>
+    <a class="nav-link {% if active_page == 'treatments' %}active{% endif %}" href="{{ url_for('treatment_suggestions') }}">
+        <i class="bi bi-capsule"></i> Treatment Suggestions
+    </a>
+    <a class="nav-link {% if active_page == 'mortality' %}active{% endif %}" href="{{ url_for('mortality_reports') }}">
+        <i class="bi bi-graph-down"></i> Mortality Reports
+    </a>
+    <a class="nav-link {% if active_page == 'profile' %}active{% endif %}" href="{{ url_for('vet_profile') }}">
+        <i class="bi bi-person-badge"></i> My Profile
+    </a>
+</nav>

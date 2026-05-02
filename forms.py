@@ -7,38 +7,51 @@ import json
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
-    role = SelectField('Login As', choices=[
-        ('', 'Select Role'),
-        ('farmer', 'Farmer'),
-        ('veterinarian', 'Veterinarian'),
-        ('organization_admin', 'Organization Admin'),
-        ('system_admin', 'System Admin')
-    ], validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
+    full_name = StringField('Full Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    full_name = StringField('Full Name', validators=[Optional()])
     phone = StringField('Phone Number', validators=[Optional()])
     role = SelectField('User Role', choices=[
         ('', 'Select Role'),
         ('farmer', 'Farmer'),
         ('veterinarian', 'Veterinarian')
     ], validators=[DataRequired()])
-    location = TextAreaField('Location/Farm Address', validators=[Optional()])
+    location = SelectField('Mzuzu Area', choices=[
+        ('', 'Select Area in Mzuzu'),
+        ('Mzuzu Central', 'Mzuzu Central'),
+        ('Luwinga', 'Luwinga'),
+        ('Chasefu', 'Chasefu'),
+        ('Kaning\'ina', 'Kaning\'ina'),
+        ('Masasa', 'Masasa'),
+        ('Vipya', 'Vipya'),
+        ('Katawa', 'Katawa'),
+        ('Mchengautuba', 'Mchengautuba'),
+        ('Zolozolo', 'Zolozolo'),
+        ('St. John\'s', 'St. John\'s'),
+        ('Other', 'Other Area in Mzuzu')
+    ], validators=[DataRequired()])
+    specific_location = StringField('Specific Location/Street', validators=[Optional()])
     
     # Farm specific for farmers
     farm_name = StringField('Farm Name', validators=[Optional()])
-    farm_size = StringField('Farm Size (acres)', validators=[Optional()])
     animal_types = SelectField('Primary Animal Types', choices=[
         ('', 'Select Animals'),
         ('cattle', 'Cattle Only'),
         ('goat', 'Goats Only'),
         ('cattle,goat', 'Both Cattle and Goats')
+    ], validators=[Optional()])
+    production_focus = SelectField('Production Focus', choices=[
+        ('', 'Select Focus'),
+        ('dairy', 'Dairy'),
+        ('meat', 'Meat'),
+        ('dual', 'Dual Purpose'),
+        ('breeding', 'Breeding Stock')
     ], validators=[Optional()])
     
     submit = SubmitField('Register')
@@ -55,16 +68,13 @@ class RegistrationForm(FlaskForm):
 
 class SymptomForm(FlaskForm):
     # Animal Information
-    animal_id = StringField('Animal ID/Tag Number', validators=[DataRequired()])
-    animal_name = StringField('Animal Name (Optional)', validators=[Optional()])
-    animal_type = SelectField('Animal Type', choices=[
-        ('', 'Select Type'),
+    animal_type = SelectField('Specie', choices=[
+        ('', 'Select Specie'),
         ('cattle', 'Cattle'),
         ('goat', 'Goat')
     ], validators=[DataRequired()])
     animal_age = IntegerField('Age (months)', validators=[Optional(), NumberRange(min=0)])
     animal_weight = FloatField('Weight (kg)', validators=[Optional(), NumberRange(min=0)])
-    animal_breed = StringField('Breed', validators=[Optional()])
     
     # Cattle/Goat specific
     is_dairy = BooleanField('Dairy Animal')
@@ -112,9 +122,6 @@ class SymptomForm(FlaskForm):
         ('stopped', 'Stopped'),
         ('abnormal', 'Abnormal (clots, blood)')
     ], validators=[Optional()])
-    
-    # Common Symptoms for Cattle/Goats
-    additional_symptoms = TextAreaField('Additional Observations', validators=[Optional()])
     
     # Environmental Factors
     feed_type = StringField('Current Feed Type', validators=[Optional()])
@@ -296,7 +303,7 @@ class ProfileForm(FlaskForm):
     # Farm information
     farm_name = StringField('Farm Name', validators=[Optional()])
     location = TextAreaField('Farm Address/Location', validators=[Optional()])
-    farm_size = StringField('Farm Size (acres)', validators=[Optional()])
+    specific_location = StringField('Specific Location/Street', validators=[Optional()])
     
     # Animal information
     animal_types = SelectField('Primary Animal Types', choices=[
