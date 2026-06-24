@@ -150,84 +150,14 @@ def create_notification(user_id, notification_type, title, message, priority='me
     db.session.add(notification)
     db.session.commit()
 
-def create_default_users():
-    # Create system admin if not exists
-    if not User.query.filter_by(username='sysadmin').first():
-        sysadmin = User(
-            username='sysadmin',
-            email='sysadmin@animalhealth.com',
-            full_name='System Administrator',
-            role='system_admin',
-            location='Headquarters',
-            status='approved',
-            approved_at=get_malawi_time()
-        )
-        sysadmin.set_password('pass123')
-        db.session.add(sysadmin)
-    
-    # Create organization admin if not exists
-    if not User.query.filter_by(username='orgadmin').first():
-        orgadmin = User(
-            username='orgadmin',
-            email='orgadmin@animalhealth.com',
-            full_name='Organization Administrator',
-            role='organization_admin',
-            location='Headquarters',
-            status='approved',
-            approved_at=get_malawi_time()
-        )
-        orgadmin.set_password('pass123')
-        db.session.add(orgadmin)
-    
-    # Create sample veterinarian
-    if not User.query.filter_by(username='vet1').first():
-        vet = User(
-            username='vet1',
-            email='vet1@animalhealth.com',
-            full_name='Dr. Sarah Smith',
-            phone='+1 (555) 987-6543',
-            role='veterinarian',
-            location='Central District',
-            status='approved',
-            approved_at=get_malawi_time()
-        )
-        vet.set_password('pass123')
-        db.session.add(vet)
-    
-    # Create sample farmer
-    if not User.query.filter_by(username='farmer1').first():
-        farmer = User(
-            username='farmer1',
-            email='farmer1@example.com',
-            full_name='John Farmer',
-            phone='+1 (555) 123-4567',
-            role='farmer',
-            location='Lilongwe',
-            farm_name='Green Valley Farm',
-            animal_types='Cattle,Goats',
-            production_focus='dairy',
-            status='approved',
-            approved_at=get_malawi_time()
-            )
-        farmer.set_password('pass123')
-        db.session.add(farmer)
+# NOTE:
+# Default users were previously hardcoded and seeded at startup.
+# This has been removed so that user/admin/vet data is sourced from the database only.
 
-    existing_default_users = User.query.filter(
-        User.username.in_(['sysadmin', 'orgadmin', 'vet1', 'farmer1'])
-    ).all()
-    for user in existing_default_users:
-        user.status = 'approved'
-        if not user.approved_at:
-            user.approved_at = get_malawi_time()
-        user.rejected_at = None
-
-    db.session.commit()
-
-# Create tables and seed default users after helper definitions are available
 with app.app_context():
     db.create_all()
     ensure_user_approval_columns()
-    create_default_users()
+
 
 # Routes
 @app.route('/landing')
@@ -326,6 +256,7 @@ def dashboard():
 @login_required
 @role_required('farmer')
 def farmer_dashboard():
+
     # Get statistics
     total_reports = SymptomReport.query.filter_by(farmer_id=current_user.id).count()
     pending_predictions = SymptomReport.query.filter_by(
@@ -370,11 +301,9 @@ def symptom_form():
             animal_age=form.animal_age.data,
             animal_weight=form.animal_weight.data,
             animal_breed=None,
-            appetite=form.appetite.data,
             temperature=form.temperature.data,
             heart_rate=form.heart_rate.data,
             respiration_rate=form.respiration_rate.data,
-            rumen_movement=form.rumen_movement.data,
             stool_consistency=form.stool_consistency.data,
             milk_production=form.milk_production.data,
             additional_symptoms=json.dumps(combined_symptoms),
@@ -387,8 +316,9 @@ def symptom_form():
         db.session.add(report)
         db.session.commit()
         
-        # Create prediction (simulated)
+        # Create prediction using the model pipeline
         prediction = create_prediction(report)
+
         
         # Create notification for farmer
         create_notification(
@@ -417,47 +347,69 @@ def symptom_form():
     
     return render_template('farmer/symptom_form.html', form=form)
 
-def create_prediction(report):
-    # Simulate AI prediction
-    diseases = {
-        'cattle': ['Respiratory Infection', 'Foot Rot', 'Mastitis', 'Bloat'],
-        'poultry': ['Avian Influenza', 'Newcastle Disease', 'Coccidiosis', 'Fowl Pox'],
-        'goat': ['Parasitic Infection', 'Pneumonia', 'Enterotoxemia', 'Caseous Lymphadenitis'],
-        'sheep': ['Foot Rot', 'Pneumonia', 'Enterotoxemia', 'Scrapie'],
-        'pig': ['Swine Flu', 'Porcine Reproductive', 'Respiratory Syndrome', 'Diarrhea']
+def run_model_prediction(report):
+    """PLACEHOLDER for real ML model inference.
+
+    Replace this function later with your actual model code.
+    It must return a dict with keys:
+      - disease_name (str)
+      - disease_category (str)
+      - confidence (float 0..1)
+      - severity (str)
+      - possible_diseases (list[str])
+      - model_version (str)
+      - features_used (dict/any serializable)
+    """
+    # Minimal placeholder output (no hardcoded disease catalog here).
+    return {
+        'disease_name': 'Unknown',
+        'disease_category': 'general',
+        'confidence': 0.5,
+        'severity': 'moderate',
+        'possible_diseases': [],
+            'model_version': (lambda: (Configuration.query.filter_by(category='general', key='model_version').first().value
+            if Configuration.query.filter_by(category='general', key='model_version').first() else None))(),
+        'features_used': {
+            'animal_type': report.animal_type,
+            'animal_age': report.animal_age,
+            'animal_weight': report.animal_weight,
+            'appetite': report.appetite,
+            'temperature': report.temperature,
+            'heart_rate': report.heart_rate,
+            'respiration_rate': report.respiration_rate,
+            'rumen_movement': report.rumen_movement,
+            'stool_consistency': report.stool_consistency,
+            'milk_production': report.milk_production,
+            'additional_symptoms': report.additional_symptoms,
+            'feed_type': report.feed_type,
+            'housing_conditions': report.housing_conditions,
+        }
     }
-    
-    animal_type = report.animal_type
-    possible_diseases = diseases.get(animal_type, ['General Infection'])
-    
-    # Simple rule-based prediction
-    confidence = 0.7
-    if report.temperature and report.temperature > 39.5:
-        confidence += 0.15
-    if report.appetite == 'none':
-        confidence += 0.1
-    confidence = min(confidence, 0.95)
-    
+
+
+def create_prediction(report):
+    prediction_output = run_model_prediction(report)
+
     prediction = Prediction(
         prediction_id=generate_prediction_id(),
         symptom_report_id=report.id,
         user_id=report.farmer_id,
-        disease_name=random.choice(possible_diseases),
-        disease_category='general',
-        confidence=confidence,
-        severity='moderate' if confidence < 0.8 else 'high',
-        model_version='v2.1.4',
-        possible_diseases=json.dumps(possible_diseases),
+        disease_name=prediction_output.get('disease_name'),
+        disease_category=prediction_output.get('disease_category'),
+        confidence=prediction_output.get('confidence'),
+        severity=prediction_output.get('severity'),
+        model_version=prediction_output.get('model_version') or None,
+        possible_diseases=json.dumps(prediction_output.get('possible_diseases') or []),
+        features_used=json.dumps(prediction_output.get('features_used') or {}),
         review_status='pending'
     )
-    
-    # Update report status
+
     report.status = 'predicted'
-    
     db.session.add(prediction)
     db.session.commit()
-    
+
     return prediction
+
 
 @app.route('/farmer/symptoms/history')
 @login_required

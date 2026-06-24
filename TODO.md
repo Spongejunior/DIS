@@ -1,20 +1,12 @@
-# Organization Admin Dashboard Replacement Plan
+# TODO - Remove hardcoded data + use real DB/model for predictions
 
-## Steps to Complete:
-
-- [ ] Step 1: Create this TODO.md file ✅
-- [x] Step 2: Update {% block sidebar %} with new design using Font Awesome icons and green active state matching project theme (#2c7744)
-- [x] Step 3: Update {% block styles %} with glassmorphism CSS and hovers
-- [x] Step 4: Replace {% block content %} with new Bootstrap-based layout:
-  | Section | Use Dynamic Data |
-  |---------|------------------|
-  | KPI Cards | total_farmers, active_predictions, total_veterinarians, system_accuracy |
-  | Performance Overview | Progress bars with accuracy/system_accuracy |
-  | Recent Activities | Loop recent_logs |
-  | Regional Overview | Static Mzuzu 42 |
-  | Quick Actions | url_for to existing routes |
-- [x] Step 5: Use edit_file on templetes/organization_admin/dashboard.html
-- [x] Step 6: Test with: `python app.py` (login orgadmin/pass123, go to /organization/dashboard)
-- [x] Step 7: Updated ✅
-- [x] Step 8: Complete
+## Plan
+- [ ] 1) Remove hardcoded default user seeding from `app.py` (sysadmin/orgadmin/vet1/farmer1) and replace with DB-driven bootstrap (or disable auto-seed).
+- [ ] 2) Replace `create_prediction(report)` hardcoded disease dictionary/rule-based simulation with a `run_prediction(report)` placeholder interface.
+  - [ ] 2.1) Add `MODEL_PREDICTOR` abstraction that will be replaced later by the real model.
+  - [ ] 2.2) Ensure prediction output fields saved into `Prediction` come only from model output, not hardcoded lists.
+- [ ] 3) Update veterinarian confirm flow to create `Treatment` from DB disease library data (not hardcoded medication/frequency/duration).
+- [ ] 4) Replace admin/system hardcoded metrics (accuracy/uptime/api requests/component status, performance breakdown, model update schedules) with DB-derived values or `SystemLog`/`PerformanceMetric` queries.
+- [ ] 5) Verify farmer history pages already query `Prediction` rows (so after step 2 they will be “real”).
+- [ ] 6) Run application smoke test and ensure prediction history updates in real time.
 

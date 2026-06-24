@@ -91,31 +91,16 @@
                     <h5 class="fw-bold mb-4">Select Observed Symptoms</h5>
                     
                     <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted d-block mb-3">Vital Signs</label>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                {{ form.appetite.label(class="form-label small") }}
-                                {{ form.appetite(class="form-select border-0 bg-light") }}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.temperature.label(class="form-label small") }}
-                                {{ form.temperature(class="form-control border-0 bg-light", placeholder="°C") }}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.rumen_movement.label(class="form-label small") }}
-                                {{ form.rumen_movement(class="form-select border-0 bg-light") }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
                         <label class="form-label small fw-bold text-muted d-block mb-3">Common Signs</label>
                         <div class="row g-3" id="symptomGrid">
                             {% set common_symptoms = [
-                                "Fever","Loss of appetite","Weight loss","Lethargy",
-                                "Coughing","Sneezing","Nasal discharge","Eye discharge",
-                                "Labored breathing","Rapid breathing","Diarrhea","Bloody diarrhea",
-                                "Lameness","Swollen lymph nodes"
+                                "Abnormal milk","Abortion","Anemia","Bleeding from orifices","Blisters in mouth","Bloating","Blood in stool",
+                                "Coughing","Dark feces","Dehydration","Diarrhea","Difficulty breathing","Difficulty walking","Drooling",
+                                "Excessive salivation","Eye discharge","Fever","Hair loss","High fever","High pulse rate","Lameness",
+                                "Loss of appetite","Mouth sores","Nasal discharge","Pain in udder","Rapid breathing","Reduced fertility",
+                                "Reduced milk production","Restlessness","Retained placenta","Rough coat","Shivering","Skin lesions",
+                                "Sudden death","Sunken eyes","Swollen joints","Swollen lymph nodes","Swollen udder","Weakness",
+                                "Weight loss"
                             ] %}
 
                             {% for s in common_symptoms %}
@@ -123,12 +108,14 @@
                                 <div class="symptom-tag-card p-2 rounded-3 text-center border cursor-pointer transition-all small fw-medium" 
                                      onclick="toggleSymptom(this)" data-value="{{ s }}">
                                     {{ s }}
-                                    <input type="checkbox" name="symptoms" value="{{ s }}" class="d-none">
+                                    <input type="checkbox" name="symptoms" value="{{ s }}" class="d-none" title="{{ s }}">
+
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
+
 
                 </div>
                 <div class="card-footer bg-white border-0 p-4 pt-0 d-flex justify-content-between">

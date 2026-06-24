@@ -157,26 +157,86 @@ main {
 
 /* Landing Page Styles */
 .hero {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     align-items: center;
-    gap: 3rem;
-    margin-bottom: 4rem;
+    gap: 4rem;
+    min-height: 80vh;
+    max-width: 1280px;
+    margin: 0 auto 4rem;
 }
 
 .hero-content {
-    flex: 1;
+    max-width: 550px;
+}
+
+.hero-content .badge {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: rgba(44, 119, 68, 0.12);
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+}
+
+.hero h2 {
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    line-height: 1;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    color: #1c2b21;
+    background: none;
+    -webkit-text-fill-color: initial;
+}
+
+.hero p {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: #5d6d63;
+    margin-bottom: 2rem;
+    max-width: 520px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.hero-tag {
+    background: white;
+    padding: 12px 20px;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    font-weight: 500;
 }
 
 .hero-image {
-    flex: 1;
-    text-align: center;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.hero-image img {
-    max-width: 100%;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
+
+.hero-image img.main-image {
+    width: 100%;
+    max-width: 420px;
+    height: 540px;
+    object-fit: cover;
+    border-radius: 28px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.12);
 }
 
 .hero-image img:hover {
@@ -184,13 +244,13 @@ main {
 }
 
 .hero h2 {
-    font-size: 2.8rem;
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    line-height: 1;
+    font-weight: 800;
     margin-bottom: 1.5rem;
-    color: var(--primary);
-    line-height: 1.2;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #1c2b21;
+    background: none;
+    -webkit-text-fill-color: initial;
 }
 
 .hero p {
@@ -238,6 +298,63 @@ main {
     color: var(--gray);
     line-height: 1.6;
 }
+
+
+
+
+
+.stats-card {
+    position: absolute;
+    top: 120px;
+    left: -70px;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    width: 220px;
+    z-index: 2;
+}
+
+.stats-card h4 {
+    margin-bottom: 1rem;
+    color: var(--dark);
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    width: 75%;
+    height: 100%;
+    background: var(--primary);
+}
+
+.goat-card {
+    position: absolute;
+    bottom: 20px;
+    left: -50px;
+    width: 220px;
+    height: 170px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    z-index: 2;
+}
+
+.goat-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+
+
 
 .stats-section {
     display: grid;
@@ -758,38 +875,49 @@ footer {
 }
 
 /* Responsive Styles */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
     .hero {
-        flex-direction: column;
-    }
-    
-    .hero h2 {
-        font-size: 2.2rem;
-    }
-    
-    nav ul {
-        display: none;
-    }
-    
-    .auth-buttons {
-        display: none;
-    }
-    
-    .auth-container {
-        flex-direction: column;
-        gap: 2rem;
-    }
-    
-    .dashboard-stats {
-        grid-template-columns: 1fr;
-    }
-    
-    .footer-content {
         grid-template-columns: 1fr;
         text-align: center;
+        gap: 3rem;
     }
-    
-    .footer-links {
+
+    .hero-content {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .hero p {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .stats-card,
+    .goat-card {
+        position: static;
+        margin: 1rem auto;
+    }
+
+    .hero-image {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero h2 {
+        font-size: 2.8rem;
+    }
+
+    .hero-buttons {
         justify-content: center;
+    }
+
+    .hero-tags {
+        justify-content: center;
+    }
+
+    .hero-image img.main-image {
+        max-width: 100%;
+        height: auto;
     }
 }
