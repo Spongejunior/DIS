@@ -48,26 +48,24 @@
                     </div>
 
                     <div class="hero-highlights">
-                        <div class="highlight-chip">
-                            <i class="fa-solid fa-bolt"></i>
-                            <span>Fast symptom reporting</span>
-                        </div>
-                        <div class="highlight-chip">
-                            <i class="fa-solid fa-stethoscope"></i>
-                            <span>Vet review workflow</span>
-                        </div>
-                        <div class="highlight-chip">
-                            <i class="fa-solid fa-mobile-screen-button"></i>
-                            <span>Works across devices</span>
-                        </div>
+                        <div class="hero-tags">
+        <span class="hero-tag">⚡ Fast symptom reporting</span>
+        <span class="hero-tag">🩺 Quick Vet review </span>
+                    <span class="hero-tag">📱 Works across devices</span>
+    </div>
                     </div>
                 </div>
 
                 <div class="hero-visual">
                     <div class="hero-card hero-card-main">
                         <img src="https://cdn.phototourl.com/free/2026-06-24-a9d92bbe-d728-4a4d-9c7d-1614cb350cb6.jpg" alt="Healthy livestock">
-                        <img src="https://cdn.phototourl.com/free/2026-06-24-8da66cca-dcb5-4753-82f8-8ba90a0b6775.jpg" alt="Healthy livestock">
                     </div>
+
+                    {# Moved goat picture under hero content (left aligned) #}
+                    <div class="hero-goat">
+                        <img src="{{ url_for('static', filename='images/goat.jpg') }}" alt="Goat">
+                    </div>
+
                     <div class="hero-card hero-card-floating">
                         <p class="metric-label">Average response flow</p>
                         <div class="metric-row">

@@ -23,6 +23,11 @@
 {% endblock %}
 
 {% block content %}
+
+{% if not predictions or predictions|length == 0 %}
+<div class="alert alert-info" role="alert">
+    No predictions yet. Submit the symptom report first.
+</div>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-graph-up"></i> Disease Predictions & Recommendations</h2>
     <div>
@@ -38,26 +43,33 @@
         <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Active Predictions Requiring Attention</h5>
     </div>
     <div class="card-body">
-        <div class="alert alert-warning">
-            <div class="d-flex">
-                <div class="flex-shrink-0">
-                    <i class="bi bi-thermometer-high" style="font-size: 2rem;"></i>
-                </div>
-                <div class="flex-grow-1 ms-3">
-                    <h5>High Probability of Respiratory Infection</h5>
-                    <p><strong>Animal:</strong> Bessie (Cow-001) | <strong>Confidence:</strong> 92% | <strong>Report ID:</strong> R-2024-045</p>
-                    <p><strong>Recommended Action:</strong> Isolate animal, provide antibiotics as prescribed, monitor temperature twice daily.</p>
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal">
-                            <i class="bi bi-capsule"></i> View Treatment Details
-                        </button>
-                        <button class="btn btn-sm btn-outline-success">
-                            <i class="bi bi-check-circle"></i> Mark as Addressed
-                        </button>
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-thermometer-high" style="font-size: 2rem;"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5>AI Prediction: {{ predictions[0].disease_name if predictions and predictions|length > 0 else 'Unknown' }}</h5>
+                                <p>
+                                    <strong>Confidence:</strong>
+                                    {{ (predictions[0].confidence * 100)|round(1) if predictions and predictions|length > 0 else 0 }}% 
+                                    <span class="ms-2">| <strong>Report ID:</strong> {{ predictions[0].symptom_report.report_id if predictions and predictions|length > 0 else '--' }}</span>
+                                </p>
+                                <p>
+                                    <strong>Recommended Action:</strong>
+                                    {{ predictions[0].recommendation_text if predictions and predictions|length > 0 else 'Contain the animal and wait for veterinarian prescription.' }}
+                                </p>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal">
+                                        <i class="bi bi-capsule"></i> View Treatment Details
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" disabled title="Waiting for veterinarian review">
+                                        <i class="bi bi-check-circle"></i> Mark as Addressed
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
