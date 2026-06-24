@@ -144,6 +144,9 @@ class Prediction(db.Model):
     severity = db.Column(db.String(20))  # mild, moderate, severe, critical
     predicted_at = db.Column(db.DateTime, default=get_malawi_time)
     
+    # Safety recommendation (shown to farmer while waiting for vet)
+    recommendation_text = db.Column(db.Text)
+    
     # Common cattle/goat diseases
     possible_diseases = db.Column(db.Text)  # JSON list of possible diseases with probabilities
     
@@ -156,6 +159,8 @@ class Prediction(db.Model):
     # Model info
     model_version = db.Column(db.String(20))
     features_used = db.Column(db.Text)  # JSON string of features
+
+
     
     def get_possible_diseases(self):
         if self.possible_diseases:

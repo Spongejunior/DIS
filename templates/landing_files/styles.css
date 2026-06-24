@@ -34,6 +34,8 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
 /* Header Styles */
@@ -136,14 +138,14 @@ nav a:hover, nav a.active {
 /* Main Content Styles */
 main {
     flex: 1;
-    padding: 2rem 5%;
+    padding: 2rem 4rem;
 }
 
 .page {
     display: none;
     max-width: 1200px;
     margin: 0 auto;
-    animation: fadeIn 0.5s ease-in-out;
+    
 }
 
 @keyframes fadeIn {
@@ -161,7 +163,7 @@ main {
     grid-template-columns: 1fr 1fr;
     align-items: center;
     gap: 4rem;
-    min-height: 80vh;
+    min-height: 92vh;
     max-width: 1280px;
     margin: 0 auto 4rem;
 }
@@ -875,6 +877,14 @@ footer {
 }
 
 /* Responsive Styles */
+
+.hero-goat img{
+    width: 220px;
+    height: auto;
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
 @media (max-width: 992px) {
     .hero {
         grid-template-columns: 1fr;

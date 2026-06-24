@@ -286,6 +286,38 @@ def farmer_dashboard():
 @role_required('farmer')
 def symptom_form():
     form = SymptomForm()
+
+    # Hard debug: always show what the server received.
+    # This helps identify why predictions are not being created after Submit & Predict.
+    if request.method == 'POST':
+        app.logger.warning(
+            'symptom_form POST: user_id=%s, animal_type=%r, temperature=%r, symptoms_count=%s, valid=%s',
+            getattr(current_user, 'id', None),
+            request.form.get('animal_type'),
+            request.form.get('temperature'),
+            len(request.form.getlist('symptoms')),
+            form.validate()
+        )
+        try:
+            # Save a system log record so you can view it in /system/logs
+            log_system_event(
+                'warning',
+                'prediction',
+                'symptom_form POST received',
+                current_user.id,
+                details={
+                    'animal_type': request.form.get('animal_type'),
+                    'animal_age': request.form.get('animal_age'),
+                    'animal_weight': request.form.get('animal_weight'),
+                    'temperature': request.form.get('temperature'),
+                    'symptoms_count': len(request.form.getlist('symptoms')),
+                    'form_errors': form.errors,
+                }
+            )
+        except Exception:
+            # Do not block the request if logging fails
+            pass
+
     if form.validate_on_submit():
         report_id = generate_report_id()
         selected_symptoms = request.form.getlist('symptoms')
@@ -348,28 +380,34 @@ def symptom_form():
     return render_template('farmer/symptom_form.html', form=form)
 
 def run_model_prediction(report):
-    """PLACEHOLDER for real ML model inference.
+    """Run ML inference using model/livestock_disease_model.pkl.
 
-    Replace this function later with your actual model code.
-    It must return a dict with keys:
+    Returns a dict with keys:
       - disease_name (str)
       - disease_category (str)
       - confidence (float 0..1)
       - severity (str)
       - possible_diseases (list[str])
+      - recommendation_text (str)
       - model_version (str)
       - features_used (dict/any serializable)
     """
-    # Minimal placeholder output (no hardcoded disease catalog here).
-    return {
-        'disease_name': 'Unknown',
-        'disease_category': 'general',
-        'confidence': 0.5,
-        'severity': 'moderate',
-        'possible_diseases': [],
-            'model_version': (lambda: (Configuration.query.filter_by(category='general', key='model_version').first().value
-            if Configuration.query.filter_by(category='general', key='model_version').first() else None))(),
-        'features_used': {
+    import joblib
+    import numpy as np
+
+    model_path = os.path.join(os.path.dirname(__file__), 'model', 'livestock_disease_model.pkl')
+    # fallback if relative path differs
+    if not os.path.exists(model_path):
+        model_path = os.path.join(os.path.dirname(__file__), 'model', 'livestock_disease_model.pkl')
+
+    model = joblib.load(model_path)
+
+    # Build feature vector based on common fields stored in SymptomReport.
+    # IMPORTANT: your training pipeline likely includes preprocessing inside the saved estimator.
+    # We pass a single-row dataframe with expected raw feature names as stored.
+    try:
+        import pandas as pd
+        X = pd.DataFrame([{
             'animal_type': report.animal_type,
             'animal_age': report.animal_age,
             'animal_weight': report.animal_weight,
@@ -383,12 +421,101 @@ def run_model_prediction(report):
             'additional_symptoms': report.additional_symptoms,
             'feed_type': report.feed_type,
             'housing_conditions': report.housing_conditions,
+            'feed_changes': report.feed_changes,
+            'recent_treatments': report.recent_treatments,
+        }])
+    except Exception:
+        # last-resort: numeric array cannot be guaranteed; return safe default
+        return {
+            'disease_name': 'Unknown',
+            'disease_category': 'general',
+            'confidence': 0.5,
+            'severity': 'moderate',
+            'possible_diseases': [],
+            'recommendation_text': (
+                'Isolate the animal immediately to reduce possible spread and monitor closely. '
+                'Do not start/continue antibiotics without veterinarian prescription. '
+                'Contact the veterinarian for diagnosis and prescription.'
+            ),
+            'model_version': None,
+            'features_used': {'report_id': report.report_id},
+        }
+
+    # Predict probabilities when available.
+    if hasattr(model, 'predict_proba'):
+        proba = model.predict_proba(X)
+        # pick class with max probability
+        idx = int(np.argmax(proba[0]))
+        confidence = float(proba[0][idx])
+        # class label
+        if hasattr(model, 'classes_'):
+            disease_name = str(model.classes_[idx])
+        else:
+            disease_name = 'Unknown'
+    else:
+        disease_name = str(model.predict(X)[0])
+        confidence = 0.5
+
+    # Map severity from confidence (simple heuristic)
+    if confidence >= 0.9:
+        severity = 'critical'
+    elif confidence >= 0.75:
+        severity = 'severe'
+    elif confidence >= 0.6:
+        severity = 'moderate'
+    else:
+        severity = 'mild'
+
+    disease_category = 'general'
+    possible_diseases = []
+    if hasattr(model, 'classes_') and hasattr(model, 'predict_proba'):
+        # top-3 probabilities for transparency
+        top_idx = np.argsort(proba[0])[::-1][:3]
+        possible_diseases = [
+            {'disease': str(model.classes_[i]), 'probability': float(proba[0][i])}
+            for i in top_idx
+        ]
+
+    recommendation_text = (
+        'Containment first: isolate the affected animal from the herd/barn immediately to prevent possible spread. '
+        'Keep the area clean and reduce animal-to-animal contact. '
+        'Do not administer antibiotics/antiparasitics without a veterinarian prescription. '
+        'Monitor the animal closely (temperature, breathing, appetite) and wait for vet instructions.'
+    )
+
+    model_version = None
+    try:
+        cfg = Configuration.query.filter_by(category='general', key='model_version').first()
+        model_version = cfg.value if cfg else None
+    except Exception:
+        model_version = None
+
+    return {
+        'disease_name': disease_name,
+        'disease_category': disease_category,
+        'confidence': confidence,
+        'severity': severity,
+        'possible_diseases': possible_diseases,
+        'recommendation_text': recommendation_text,
+        'model_version': model_version,
+        'features_used': {
+            'animal_type': report.animal_type,
+            'animal_age': report.animal_age,
+            'animal_weight': report.animal_weight,
+            'temperature': report.temperature,
+            'heart_rate': report.heart_rate,
+            'respiration_rate': report.respiration_rate,
+            'stool_consistency': report.stool_consistency,
+            'milk_production': report.milk_production,
+            'housing_conditions': report.housing_conditions,
+            'additional_symptoms': report.additional_symptoms,
         }
     }
 
 
 def create_prediction(report):
     prediction_output = run_model_prediction(report)
+
 
     prediction = Prediction(
         prediction_id=generate_prediction_id(),
@@ -398,6 +525,7 @@ def create_prediction(report):
         disease_category=prediction_output.get('disease_category'),
         confidence=prediction_output.get('confidence'),
         severity=prediction_output.get('severity'),
+        recommendation_text=prediction_output.get('recommendation_text'),
         model_version=prediction_output.get('model_version') or None,
         possible_diseases=json.dumps(prediction_output.get('possible_diseases') or []),
         features_used=json.dumps(prediction_output.get('features_used') or {}),
