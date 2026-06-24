@@ -87,24 +87,10 @@ class SymptomForm(FlaskForm):
     ], validators=[Optional()])
     
     # Vital Signs
-    appetite = SelectField('Appetite', choices=[
-        ('', 'Select'),
-        ('normal', 'Normal'),
-        ('reduced', 'Reduced'),
-        ('none', 'No Appetite'),
-        ('increased', 'Increased')
-    ], validators=[DataRequired()])
     temperature = FloatField('Body Temperature (°C)', validators=[DataRequired(), NumberRange(min=35, max=45)])
     heart_rate = IntegerField('Heart Rate (beats/minute)', validators=[Optional(), NumberRange(min=30, max=150)])
     respiration_rate = IntegerField('Respiration Rate (breaths/minute)', validators=[Optional(), NumberRange(min=10, max=100)])
-    
-    # Rumen/Reticulum (for ruminants)
-    rumen_movement = SelectField('Rumen Movement', choices=[
-        ('normal', 'Normal (1-2 contractions/minute)'),
-        ('reduced', 'Reduced'),
-        ('absent', 'Absent'),
-        ('increased', 'Increased')
-    ], validators=[Optional()])
+
     
     # Digestive System
     stool_consistency = SelectField('Stool Consistency', choices=[
