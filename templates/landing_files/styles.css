@@ -166,7 +166,9 @@ main {
     min-height: 92vh;
     max-width: 1280px;
     margin: 0 auto 4rem;
+    position: relative;
 }
+
 
 .hero-content {
     max-width: 550px;
