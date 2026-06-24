@@ -22,21 +22,21 @@ class RegistrationForm(FlaskForm):
         ('farmer', 'Farmer'),
         ('veterinarian', 'Veterinarian')
     ], validators=[DataRequired()])
-    location = SelectField('Mzuzu Area', choices=[
-        ('', 'Select Area in Mzuzu'),
-        ('Mzuzu Central', 'Mzuzu Central'),
-        ('Luwinga', 'Luwinga'),
-        ('Chasefu', 'Chasefu'),
-        ('Kaning\'ina', 'Kaning\'ina'),
-        ('Masasa', 'Masasa'),
-        ('Vipya', 'Vipya'),
-        ('Katawa', 'Katawa'),
+    location = SelectField('Mzimba North', choices=[
+        ('', 'Select Blocks in Mzimba North'),
+        ('Bwengu', 'Bwengu'),
+        ('Emgucwini', 'Emgucwini'),
+        ('Emsizini', 'Emsizini'),
+        ('Euthini', 'Euthini'),
+        ('Malidade', 'Malidade'),
+        ('Mbalachanda', 'Mbalachanda'),
+        ('Mpherembe', 'Mpherembe'),
         ('Mchengautuba', 'Mchengautuba'),
-        ('Zolozolo', 'Zolozolo'),
-        ('St. John\'s', 'St. John\'s'),
-        ('Other', 'Other Area in Mzuzu')
+        ('Njuyu', 'Njuyu'),
+        ('Zombwe', 'Zombwe'),
+        
     ], validators=[DataRequired()])
-    specific_location = StringField('Specific Location/Street', validators=[Optional()])
+    specific_location = StringField('Village', validators=[Optional()])
     
     # Farm specific for farmers
     farm_name = StringField('Farm Name', validators=[Optional()])
