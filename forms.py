@@ -121,8 +121,25 @@ class SymptomForm(FlaskForm):
     
     # Other Animals
     similar_cases = IntegerField('Number of Other Animals Showing Similar Symptoms', validators=[Optional(), NumberRange(min=0)])
-    
+
+    # Extra fields required by app.py -> SymptomReport
+    appetite = SelectField('Appetite', choices=[
+        ('normal', 'Normal'),
+        ('reduced', 'Reduced'),
+        ('none', 'None'),
+        ('increased', 'Increased')
+    ], validators=[Optional()])
+
+    rumen_movement = SelectField('Rumen Movement', choices=[
+        ('normal', 'Normal'),
+        ('reduced', 'Reduced'),
+        ('absent', 'Absent')
+    ], validators=[Optional()])
+
+    animal_breed = StringField('Breed', validators=[Optional()])
+
     submit = SubmitField('Submit for Disease Prediction')
+
 
 class CattleSymptomForm(SymptomForm):
     # Cattle specific symptoms
@@ -197,9 +214,9 @@ class MortalityReportForm(FlaskForm):
         ('cattle', 'Cattle'),
         ('goat', 'Goat')
     ], validators=[DataRequired()])
-    animal_id = StringField('Animal ID/Tag Number', validators=[DataRequired()])
-    animal_name = StringField('Animal Name', validators=[Optional()])
-    breed = StringField('Breed', validators=[Optional()])
+    # animal_id = StringField('Animal ID/Tag Number', validators=[DataRequired()])
+    # animal_name = StringField('Animal Name', validators=[Optional()])
+    # breed = StringField('Breed', validators=[Optional()])
     age = IntegerField('Age (months)', validators=[Optional(), NumberRange(min=0)])
     
     # Mortality details
