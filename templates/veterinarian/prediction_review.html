@@ -111,6 +111,12 @@
             </div>
             <div class="card-footer">
                 <div class="d-grid gap-2">
+                    <a class="btn btn-primary" href="{{ url_for('add_treatment', prediction_id=p.id) }}">
+                        <i class="bi bi-capsule"></i> Add Treatment
+                    </a>
+                    <a class="btn btn-outline-info" href="{{ url_for('prediction_detail', prediction_id=p.id) }}">
+                        <i class="bi bi-eye"></i> View Details
+                    </a>
                     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmModal{{ p.id }}">
                         <i class="bi bi-check-circle"></i> Confirm Prediction
                     </button>

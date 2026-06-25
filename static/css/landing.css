@@ -27,7 +27,7 @@ html {
 
 body {
     margin: 0;
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--text);
     background:
         radial-gradient(circle at top left, rgba(216, 164, 79, 0.22), transparent 24%),
@@ -103,7 +103,7 @@ img {
 .site-footer h4,
 .hero-copy h2,
 .feature-card h4 {
-    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+    font-family: "Figtree", system-ui, sans-serif;
 }
 
 .brand h1 {
@@ -152,7 +152,7 @@ img {
     padding: 0.85rem 1.35rem;
     border-radius: 999px;
     border: 1px solid transparent;
-    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+    font-family: "Figtree", system-ui, sans-serif;
     font-weight: 700;
     transition: transform 0.2s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease;
 }
@@ -179,54 +179,86 @@ img {
     border: 1px solid rgba(29, 122, 70, 0.12);
 }
 
+/* L-shaped hero: text top-left, two cards bottom-left, tall image right.
+   Grid areas: the image spans both rows (vertical stroke of the L); the cards
+   sit in the lower row and align to its bottom (horizontal stroke). */
 .hero-section {
     display: grid;
     grid-template-columns: 1.05fr 0.95fr;
-    gap: 3rem;
-    align-items: center;
-    padding: 4rem 0 2rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "copy   visual"
+        "cards  visual";
+    column-gap: 2.75rem;
+    row-gap: 1.75rem;
+    align-items: start;
+    padding: 3rem 0 2.5rem;
 }
+
+.hero-copy { grid-area: copy; align-self: start; }
+.hero-cards { grid-area: cards; align-self: end; }   /* bottoms align with image */
+.hero-visual { grid-area: visual; }
 
 .eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.9rem;
+    padding: 0.5rem 0.95rem;
     border-radius: 999px;
     background: rgba(29, 122, 70, 0.1);
     color: var(--primary-strong);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
-.hero-copy h2 {
-    margin: 1.2rem 0 1rem;
-    font-size: clamp(2.8rem, 6vw, 5rem);
-    line-height: 0.97;
-    letter-spacing: -0.04em;
+/* Small kicker line above the headline */
+.hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: "Figtree", system-ui, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary-strong);
+    letter-spacing: 0.01em;
 }
 
+.hero-kicker i { color: var(--primary); }
+
+/* Main headline — big, but not too big */
+.hero-copy h2 {
+    margin: 0.7rem 0 1rem;
+    font-size: clamp(2rem, 3.8vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+}
+
+.accent-text { color: var(--primary); }
+
 .hero-copy p {
-    max-width: 40rem;
-    margin: 0 0 2rem;
-    font-size: 1.08rem;
+    max-width: 36rem;
+    margin: 0 0 1.6rem;
+    font-size: 1.06rem;
+    line-height: 1.6;
     color: var(--muted);
 }
 
 .hero-highlights {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.8rem;
-    margin-top: 1.8rem;
+    gap: 0.7rem;
+    margin-top: 1.4rem;
 }
 
 .highlight-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
-    padding: 0.8rem 1rem;
+    padding: 0.65rem 0.95rem;
+    font-size: 0.92rem;
     background: rgba(255, 255, 255, 0.75);
     border: 1px solid rgba(17, 49, 39, 0.08);
     border-radius: 999px;
@@ -238,13 +270,17 @@ img {
     color: var(--primary);
 }
 
-.hero-visual {
-    position: relative;
-    min-height: 560px;
+/* The two cards row (horizontal stroke of the L) */
+.hero-cards {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 1.1rem;
+    align-items: end;
+    width: 100%;
 }
 
 .hero-card {
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--surface-strong);
     box-shadow: var(--shadow-card);
@@ -252,7 +288,8 @@ img {
 
 .hero-card-main {
     height: 100%;
-    min-height: 560px;
+    min-height: clamp(440px, 56vh, 560px);
+    border-radius: var(--radius-xl);
 }
 
 .hero-card-main img {
@@ -261,35 +298,16 @@ img {
     object-fit: cover;
 }
 
-.hero-card-floating {
-    position: absolute;
-    left: -2rem;
-    bottom: 2rem;
-    width: min(82%, 320px);
-    padding: 1.2rem 1.2rem 1rem;
-    background: rgba(255, 253, 248, 0.92);
-    border: 1px solid rgba(17, 49, 39, 0.08);
-    backdrop-filter: blur(14px);
-}
-
 .goat-card-floating {
-    position: absolute;
-    left: -1.2rem;
-    top: 4.2rem;
-    width: min(52%, 220px);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    background: rgba(255, 253, 248, 0.94);
-    border: 1px solid rgba(17, 49, 39, 0.08);
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
     box-shadow: var(--shadow-card);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    z-index: 3;
 }
 
-
 .goat-card-image {
-    height: 210px;
+    height: 130px;
     width: 100%;
 }
 
@@ -300,41 +318,52 @@ img {
 }
 
 .goat-card-badge {
-    padding: 0.85rem 1rem;
-    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
-    font-weight: 800;
-    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.7rem 0.95rem;
+    font-family: "Figtree", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
     color: var(--primary-strong);
-    border-top: 1px solid rgba(17, 49, 39, 0.08);
+    border-top: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.7);
 }
 
+.goat-card-badge i { color: var(--primary); }
+
+.hero-card-flow {
+    padding: 1.2rem 1.25rem;
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+}
 
 .metric-label {
-    margin: 0 0 0.9rem;
+    margin: 0 0 0.8rem;
     color: var(--muted);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
 }
 
 .metric-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     margin-bottom: 0.8rem;
-    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+    font-family: "Figtree", system-ui, sans-serif;
+    font-weight: 600;
 }
 
-.metric-row span {
-    color: var(--muted);
-}
+.metric-row span { color: var(--muted); font-weight: 400; }
+.metric-row i { color: var(--primary); font-size: 0.8rem; }
 
 .metric-bar {
     height: 10px;
     border-radius: 999px;
     background: rgba(17, 49, 39, 0.08);
     overflow: hidden;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.7rem;
 }
 
 .metric-bar span {
@@ -345,7 +374,7 @@ img {
     background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 100%);
 }
 
-.hero-card-floating small {
+.hero-card-flow small {
     color: var(--muted);
 }
 
@@ -360,9 +389,10 @@ img {
 }
 
 .section-heading h3 {
-    margin: 0.8rem 0 0;
-    font-size: clamp(2rem, 4vw, 3rem);
-    line-height: 1.02;
+    margin: 0.6rem 0 0;
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+    line-height: 1.25;
+    font-weight: 700;
 }
 
 .feature-grid {
@@ -436,7 +466,7 @@ img {
 .stat-tile strong {
     display: block;
     margin-bottom: 0.45rem;
-    font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+    font-family: "Figtree", system-ui, sans-serif;
     font-size: 1.5rem;
 }
 
@@ -499,22 +529,23 @@ img {
         border-radius: 28px;
     }
 
+    /* Stack the L into a single column: copy, image, then the two cards. */
     .hero-section {
         grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+            "copy"
+            "visual"
+            "cards";
         padding-top: 2.5rem;
     }
 
-    .hero-visual {
-        min-height: auto;
+    .hero-cards {
+        align-self: auto;
     }
 
     .hero-card-main {
-        min-height: 420px;
-    }
-
-    .hero-card-floating {
-        left: 1rem;
-        bottom: 1rem;
+        min-height: 360px;
     }
 
     .feature-grid,
@@ -548,17 +579,16 @@ img {
     }
 
     .hero-copy h2 {
-        font-size: clamp(2.2rem, 12vw, 3.4rem);
+        font-size: clamp(1.7rem, 8vw, 2.3rem);
     }
 
     .hero-card-main {
-        min-height: 340px;
+        min-height: 300px;
     }
 
-    .hero-card-floating {
-        position: static;
-        width: 100%;
-        margin-top: 1rem;
+    /* Stack the two cards on small screens */
+    .hero-cards {
+        grid-template-columns: 1fr;
     }
 
     .feature-grid,

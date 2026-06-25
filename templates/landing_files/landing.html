@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChiwetoCare - Disease Identification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Noto+Sans:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -34,54 +37,55 @@
 
         <main>
             <section class="hero-section">
-                <div class="hero-content">
-                    <span class="badge">Smart disease support for cattle and goats</span>
-                    <h2>Spot symptoms earlier and act faster with practical AI guidance.</h2>
+                {# Text block — top of the left column #}
+                <div class="hero-copy">
+                    <span class="hero-kicker"><i class="fa-solid fa-seedling"></i> Spot symptoms earlier. Act faster.</span>
+                    <h2>Smart disease identification for <span class="accent-text">cattle &amp; goats</span></h2>
                     <p>
-                        ChiwetoCare helps farmers, veterinarians, and administrators work from the same platform to
-                        identify livestock illness, review predictions and respond with more confidence given proper assistance needed from the veterinarian
+                        ChiwetoCare brings farmers, veterinarians, and administrators onto one platform to
+                        identify livestock illness, review AI predictions, and respond with confidence — backed by the
+                        veterinary support each case needs.
                     </p>
 
                     <div class="hero-actions">
-                        <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started <i class="fa-solid fa-arrow-right"></i></a>
                         <a href="{{ url_for('login') }}" class="btn btn-soft">Open Dashboard</a>
                     </div>
 
                     <div class="hero-highlights">
-                        <div class="hero-tags">
-        <span class="hero-tag">⚡ Fast symptom reporting</span>
-        <span class="hero-tag">🩺 Quick Vet review </span>
-                    <span class="hero-tag">📱 Works across devices</span>
-    </div>
+                        <span class="highlight-chip"><i class="fa-solid fa-bolt"></i> Fast symptom reporting</span>
+                        <span class="highlight-chip"><i class="fa-solid fa-stethoscope"></i> Quick vet review</span>
+                        <span class="highlight-chip"><i class="fa-solid fa-mobile-screen"></i> Works across devices</span>
                     </div>
                 </div>
 
-                <div class="hero-visual">
-                    <div class="hero-card hero-card-main">
-                        <img src="https://cdn.phototourl.com/free/2026-06-24-a9d92bbe-d728-4a4d-9c7d-1614cb350cb6.jpg" alt="Healthy livestock">
-                    </div>
-
-                    
-                    {# Separate floating goat card (left side) #}
+                {# Two cards — bottom-left, bottoms aligned with the image to form the L #}
+                <div class="hero-cards">
                     <div class="goat-card-floating">
                         <div class="goat-card-image">
-                            <img src="{{ url_for('static', filename='images/goat.jpg') }}" alt="Goat">
+                            <img src="{{ url_for('static', filename='images/goat.jpg') }}" alt="Goat receiving care">
                         </div>
-                        <div class="goat-card-badge">Goat care</div>
+                        <div class="goat-card-badge"><i class="fa-solid fa-heart-pulse"></i> Goat care</div>
                     </div>
 
-
-                    <div class="hero-card hero-card-floating">
+                    <div class="hero-card hero-card-flow">
                         <p class="metric-label">Average response flow</p>
                         <div class="metric-row">
                             <strong>Report</strong>
+                            <i class="fa-solid fa-arrow-right-long"></i>
                             <span>Review</span>
+                            <i class="fa-solid fa-arrow-right-long"></i>
                             <strong>Treat</strong>
                         </div>
-                        <div class="metric-bar">
-                            <span></span>
-                        </div>
+                        <div class="metric-bar"><span></span></div>
                         <small>Designed for farm-to-vet coordination.</small>
+                    </div>
+                </div>
+
+                {# Main image — the tall right side of the L #}
+                <div class="hero-visual">
+                    <div class="hero-card hero-card-main">
+                        <img src="https://cdn.phototourl.com/free/2026-06-24-a9d92bbe-d728-4a4d-9c7d-1614cb350cb6.jpg" alt="Healthy livestock in a green field">
                     </div>
                 </div>
             </section>
