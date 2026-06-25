@@ -1059,6 +1059,70 @@ def treatment_suggestions():
                          pending_treatments=pending_treatments,
                          active_treatments=active_treatments)
 
+
+@app.route('/veterinarian/predictions/<int:prediction_id>/treatment', methods=['GET', 'POST'])
+@login_required
+@role_required('veterinarian')
+def add_treatment(prediction_id):
+    prediction = Prediction.query.get_or_404(prediction_id)
+    report = prediction.symptom_report
+    # The vet may only treat cases for farmers assigned to them.
+    if report.farmer not in get_assigned_farmers(current_user):
+        abort(403)
+
+    existing = report.treatment  # one-to-one; may be None or a placeholder from confirm
+    form = TreatmentForm(obj=existing) if (request.method == 'GET' and existing) else TreatmentForm()
+
+    if form.validate_on_submit():
+        treatment = existing
+        if treatment is None:
+            treatment = Treatment(
+                treatment_id=generate_treatment_id(),
+                symptom_report_id=report.id)
+            db.session.add(treatment)
+        treatment.vet_id = current_user.id
+        treatment.medication = form.medication.data
+        treatment.medication_type = form.medication_type.data
+        treatment.dosage = form.dosage.data
+        treatment.dosage_per_kg = form.dosage_per_kg.data
+        treatment.frequency = form.frequency.data
+        treatment.duration = str(form.duration.data) if form.duration.data is not None else None
+        treatment.route = form.route.data
+        treatment.supportive_care = form.supportive_care.data
+        treatment.diet_recommendations = form.diet_recommendations.data
+        treatment.follow_up_required = form.follow_up_required.data
+        treatment.follow_up_date = form.follow_up_date.data
+        treatment.milk_withdrawal_days = form.milk_withdrawal_days.data
+        treatment.meat_withdrawal_days = form.meat_withdrawal_days.data
+        treatment.status = 'prescribed'
+
+        # Confirm the prediction as part of issuing a treatment.
+        if prediction.review_status == 'pending':
+            prediction.review_status = 'confirmed'
+            prediction.reviewed_by = current_user.id
+            prediction.reviewed_at = get_malawi_time()
+        report.status = 'reviewed'
+        db.session.commit()
+
+        create_notification(
+            report.farmer_id,
+            'treatment',
+            'Treatment Recommendation Available',
+            f'Your veterinarian added a treatment plan for {report.animal_name} ({prediction.disease_name}).',
+            'high',
+            treatment.id
+        )
+        log_system_event('info', 'treatment',
+                         f'Treatment recommendation saved for {report.report_id}', current_user.id)
+        flash('Treatment recommendation saved and shared with the farmer.', 'success')
+        return redirect(url_for('predictions_review'))
+
+    return render_template('veterinarian/add_treatment.html',
+                           form=form, prediction=prediction, report=report,
+                           existing=existing,
+                           possible_diseases=prediction.get_possible_diseases())
+
+
 @app.route('/veterinarian/mortality', methods=['GET', 'POST'])
 @login_required
 @role_required('veterinarian')
@@ -1604,23 +1668,26 @@ def review_prediction(prediction_id):
         prediction.reviewed_by = current_user.id
         prediction.reviewed_at = get_malawi_time()
         
-        # Create treatment suggestion
-        treatment = Treatment(
-            treatment_id=generate_treatment_id(),
-            symptom_report_id=prediction.symptom_report_id,
-            vet_id=current_user.id,
-            medication='Antibiotic Treatment',
-            dosage='As prescribed',
-            frequency='Twice daily',
-            duration='5 days',
-            route='oral',
-            status='pending_approval'
-        )
-        db.session.add(treatment)
-        
+        # Create a placeholder treatment only if the vet has not already added one
+        # (a detailed plan can be added via "Add Treatment").
+        treatment = prediction.symptom_report.treatment
+        if treatment is None:
+            treatment = Treatment(
+                treatment_id=generate_treatment_id(),
+                symptom_report_id=prediction.symptom_report_id,
+                vet_id=current_user.id,
+                medication='To be prescribed',
+                dosage='As advised',
+                frequency='As advised',
+                duration='As advised',
+                route='oral',
+                status='pending_approval'
+            )
+            db.session.add(treatment)
+
         # Update symptom report status
         prediction.symptom_report.status = 'reviewed'
-        
+
         # Notify farmer
         create_notification(
             prediction.symptom_report.farmer_id,

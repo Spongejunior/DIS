@@ -176,7 +176,7 @@ class TreatmentForm(FlaskForm):
     weight_based = BooleanField('Calculate dosage by weight')
     animal_weight = FloatField('Animal Weight (kg)', validators=[Optional(), NumberRange(min=0)])
     dosage_per_kg = FloatField('Dosage per kg (mg/kg)', validators=[Optional(), NumberRange(min=0)])
-    total_dosage = StringField('Total Dosage', validators=[Optional()])
+    dosage = StringField('Total Dosage', validators=[Optional()])
     
     # Administration
     frequency = SelectField('Frequency', choices=[
