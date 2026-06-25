@@ -134,14 +134,17 @@
                                 <tr>
                                     <td class="px-4">
                                         <div class="fw-bold">{{ report.animal_name }}</div>
-                                        <div class="small text-muted">{{ report.animal_type|capitalize }}</div>
+                                        <div class="small text-muted">{{ report.animal_type|capitalize }}{% if report.breed %} &middot; {{ report.breed }}{% endif %}</div>
                                     </td>
                                     <td>
                                         <span class="text-danger small fw-bold">{{ report.suspected_cause }}</span>
+                                        {% if report.requires_investigation %}
+                                        <span class="badge bg-warning text-dark ms-1">Investigate</span>
+                                        {% endif %}
                                     </td>
-                                    <td>{{ report.date_of_death.strftime('%d %b %Y') }}</td>
+                                    <td>{{ report.date_of_death.strftime('%Y-%m-%d') if report.date_of_death else '--' }}</td>
                                     <td class="text-end px-4">
-                                        <button class="btn btn-sm btn-light">View Report</button>
+                                        <a href="{{ url_for('mortality_reports') }}" class="btn btn-sm btn-light">View Report</a>
                                     </td>
                                 </tr>
                                 {% endfor %}

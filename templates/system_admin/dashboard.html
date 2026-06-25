@@ -130,28 +130,28 @@
                         <div class="col-md-4">
                             <div class="small fw-bold mb-1 d-flex justify-content-between">
                                 <span>CPU Usage</span>
-                                <span>42%</span>
+                                <span>{{ cpu_usage|round(0)|int ~ '%' if cpu_usage is not none else 'N/A' }}</span>
                             </div>
                             <div class="progress rounded-pill" style="height: 8px;">
-                                <div class="progress-bar bg-success" style="width: 42%"></div>
+                                <div class="progress-bar bg-success" data-width="{{ cpu_usage|round(0)|int if cpu_usage is not none else 0 }}"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="small fw-bold mb-1 d-flex justify-content-between">
                                 <span>Memory Usage</span>
-                                <span>68%</span>
+                                <span>{{ memory_usage|round(0)|int ~ '%' if memory_usage is not none else 'N/A' }}</span>
                             </div>
                             <div class="progress rounded-pill" style="height: 8px;">
-                                <div class="progress-bar bg-info" style="width: 68%"></div>
+                                <div class="progress-bar bg-info" data-width="{{ memory_usage|round(0)|int if memory_usage is not none else 0 }}"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="small fw-bold mb-1 d-flex justify-content-between">
                                 <span>Disk Space</span>
-                                <span>85%</span>
+                                <span>{{ disk_usage|round(0)|int ~ '%' if disk_usage is not none else 'N/A' }}</span>
                             </div>
                             <div class="progress rounded-pill" style="height: 8px;">
-                                <div class="progress-bar bg-warning" style="width: 85%"></div>
+                                <div class="progress-bar bg-warning" data-width="{{ disk_usage|round(0)|int if disk_usage is not none else 0 }}"></div>
                             </div>
                         </div>
                     </div>
