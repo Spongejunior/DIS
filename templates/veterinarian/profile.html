@@ -116,7 +116,7 @@
 
                         <div class="col-12">
                             {{ form.location.label(class="form-label fw-semibold") }}
-                            {{ form.location(class="form-control", rows="3", placeholder="Area, town, or service coverage zone") }}
+                            {{ form.location(class="form-select") }}
                             {% for error in form.location.errors %}
                                 <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}

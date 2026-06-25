@@ -390,6 +390,11 @@
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
+
+            // Apply dynamic progress-bar widths from data-width (keeps templates lint-clean)
+            document.querySelectorAll('[data-width]').forEach(function(el) {
+                el.style.width = el.getAttribute('data-width') + '%';
+            });
         });
     </script>
     

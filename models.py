@@ -87,6 +87,7 @@ class SymptomReport(db.Model):
     animal_id = db.Column(db.String(50))
     animal_name = db.Column(db.String(100))
     animal_type = db.Column(db.String(10))  # 'cattle' or 'goat'
+    animal_sex = db.Column(db.String(10))  # 'male' or 'female'
     animal_age = db.Column(db.Integer)  # in months
     animal_weight = db.Column(db.Float)  # in kg
     animal_breed = db.Column(db.String(50))  # e.g., Holstein, Saanen

@@ -128,8 +128,8 @@
                                                 <i class="bi bi-activity text-primary"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-bold">{{ pred.symptom_report.animal_name }}</div>
-                                                <div class="small text-muted">ID: {{ pred.symptom_report.animal_id }}</div>
+                                                <div class="fw-bold">{{ pred.symptom_report.animal_name if pred.symptom_report else '--' }}</div>
+                                                <div class="small text-muted">{{ pred.symptom_report.animal_type if pred.symptom_report else '--' }}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -141,9 +141,9 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ pred.confidence * 100 }}%"></div>
+                                                <div class="progress-bar bg-success" role="progressbar" data-width="{{ (pred.confidence * 100)|round(1) }}"></div>
                                             </div>
-                                            <span class="small fw-bold">{{ (pred.confidence * 100)|round|int }}%</span>
+                                            <span class="small fw-bold">{{ (pred.confidence * 100)|round(1) }}%</span>
                                         </div>
                                     </td>
                                     <td class="text-end px-4">
@@ -179,9 +179,9 @@
                         {% for note in notifications %}
                         <div class="list-group-item list-group-item-action border-0 px-4 py-3">
                             <div class="d-flex align-items-center mb-1">
-                                <span class="badge bg-{{ 'danger' if note.priority == 'high' else 'primary' }} rounded-circle p-1 me-2"></span>
+                                <span class="badge bg-{{ 'danger' if note.priority in ['high', 'critical'] else ('warning' if note.priority == 'medium' else 'primary') }} rounded-circle p-1 me-2"></span>
                                 <h6 class="fw-bold mb-0 small">{{ note.title }}</h6>
-                                <small class="text-muted ms-auto">{{ note.created_at.strftime('%H:%M') }}</small>
+                                <small class="text-muted ms-auto">{{ note.created_at.strftime('%H:%M') if note.created_at else '--' }}</small>
                             </div>
                             <p class="text-muted small mb-0">{{ note.message }}</p>
                         </div>
@@ -218,14 +218,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-muted">Select Veterinarian</label>
-                    <select class="form-select border-0 bg-light py-2">
-                        <option>Dr. Smith (Primary Vet)</option>
-                        <option>Dr. Johnson</option>
-                        <option>Dr. Williams</option>
-                    </select>
-                </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Your Message</label>
                     <textarea class="form-control border-0 bg-light" rows="4" placeholder="Describe your concern in detail..."></textarea>

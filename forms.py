@@ -73,6 +73,10 @@ class SymptomForm(FlaskForm):
         ('cattle', 'Cattle'),
         ('goat', 'Goat')
     ], validators=[DataRequired()])
+    animal_sex = SelectField('Sex', choices=[
+        ('female', 'Female'),
+        ('male', 'Male')
+    ], validators=[DataRequired()])
     animal_age = IntegerField('Age (months)', validators=[Optional(), NumberRange(min=0)])
     animal_weight = FloatField('Weight (kg)', validators=[Optional(), NumberRange(min=0)])
     
@@ -88,9 +92,7 @@ class SymptomForm(FlaskForm):
     
     # Vital Signs
     temperature = FloatField('Body Temperature (°C)', validators=[DataRequired(), NumberRange(min=35, max=45)])
-    heart_rate = IntegerField('Heart Rate (beats/minute)', validators=[Optional(), NumberRange(min=30, max=150)])
-    respiration_rate = IntegerField('Respiration Rate (breaths/minute)', validators=[Optional(), NumberRange(min=10, max=100)])
-
+   
     
     # Digestive System
     stool_consistency = SelectField('Stool Consistency', choices=[
@@ -305,8 +307,21 @@ class ProfileForm(FlaskForm):
     
     # Farm information
     farm_name = StringField('Farm Name', validators=[Optional()])
-    location = TextAreaField('Farm Address/Location', validators=[Optional()])
-    specific_location = StringField('Specific Location/Street', validators=[Optional()])
+    # Block (Mzimba North) — drives automatic farmer<->veterinarian assignment.
+    location = SelectField('Block (Mzimba North)', choices=[
+        ('', 'Select Block'),
+        ('Bwengu', 'Bwengu'),
+        ('Emgucwini', 'Emgucwini'),
+        ('Emsizini', 'Emsizini'),
+        ('Euthini', 'Euthini'),
+        ('Malidade', 'Malidade'),
+        ('Mbalachanda', 'Mbalachanda'),
+        ('Mpherembe', 'Mpherembe'),
+        ('Mchengautuba', 'Mchengautuba'),
+        ('Njuyu', 'Njuyu'),
+        ('Zombwe', 'Zombwe'),
+    ], validators=[Optional()])
+    specific_location = StringField('Village', validators=[Optional()])
     
     # Animal information
     animal_types = SelectField('Primary Animal Types', choices=[

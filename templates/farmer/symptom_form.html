@@ -53,6 +53,19 @@
         </div>
     </div>
 
+    {% if form.errors %}
+    <div class="alert alert-danger border-0 shadow-sm mb-4">
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please correct the following:</h6>
+        <ul class="mb-0 small">
+            {% for field, errors in form.errors.items() %}
+                {% for error in errors %}
+                    <li>{{ form[field].label.text }}: {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <form method="POST" action="{{ url_for('symptom_form') }}" id="symptomForm">
         {{ form.hidden_tag() }}
 
@@ -67,12 +80,42 @@
                             {{ form.animal_type(class="form-select border-0 bg-light py-2") }}
                         </div>
                         <div class="col-md-6">
+                            {{ form.animal_sex.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.animal_sex(class="form-select border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
                             {{ form.animal_age.label(class="form-label small fw-bold text-muted") }}
                             {{ form.animal_age(class="form-control border-0 bg-light py-2") }}
                         </div>
                         <div class="col-md-6">
                             {{ form.animal_weight.label(class="form-label small fw-bold text-muted") }}
                             {{ form.animal_weight(class="form-control border-0 bg-light py-2") }}
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold mb-3 mt-4">Vital Signs</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.temperature.label(class="form-label small fw-bold text-muted") }}
+                            <span class="text-danger">*</span>
+                            {{ form.temperature(class="form-control border-0 bg-light py-2", id="field-temperature", placeholder="e.g. 39.0") }}
+                            <div class="form-text small">Required — normal range is about 38–40°C.</div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.appetite.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.appetite(class="form-select border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.rumen_movement.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.rumen_movement(class="form-select border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.stool_consistency.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.stool_consistency(class="form-select border-0 bg-light py-2") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.milk_production.label(class="form-label small fw-bold text-muted") }}
+                            {{ form.milk_production(class="form-select border-0 bg-light py-2") }}
                         </div>
                     </div>
                 </div>
@@ -140,6 +183,14 @@
                             <div class="col-6">
                                 <div class="small text-muted mb-1">Specie</div>
                                 <div class="fw-bold text-capitalize" id="review-type">--</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted mb-1">Sex</div>
+                                <div class="fw-bold text-capitalize" id="review-sex">--</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="small text-muted mb-1">Temp (°C)</div>
+                                <div class="fw-bold" id="review-temp">--</div>
                             </div>
                             <div class="col-12">
                                 <div class="small text-muted mb-1">Selected Symptoms</div>
@@ -220,6 +271,17 @@ function nextStep(step) {
             alert('Please select a specie.');
             return;
         }
+        const sex = document.querySelector('select[name="animal_sex"]').value;
+        if (!sex) {
+            alert('Please select the animal sex.');
+            return;
+        }
+        const temp = document.querySelector('input[name="temperature"]').value;
+        if (!temp) {
+            alert('Please enter the body temperature (°C). It is required for the prediction.');
+            document.getElementById('field-temperature').focus();
+            return;
+        }
     }
 
     document.querySelectorAll('.step-content').forEach(el => el.classList.add('d-none'));
@@ -253,8 +315,10 @@ function toggleSymptom(card) {
 
 function populateReview() {
     const type = document.querySelector('select[name="animal_type"]').value;
-    
-    document.getElementById('review-type').textContent = type;
+
+    document.getElementById('review-type').textContent = type || '--';
+    document.getElementById('review-sex').textContent = document.querySelector('select[name="animal_sex"]').value || '--';
+    document.getElementById('review-temp').textContent = document.querySelector('input[name="temperature"]').value || '--';
     
     const selectedSymptoms = [...document.querySelectorAll('input[name="symptoms"]:checked')].map(el => el.value);
     const container = document.getElementById('review-symptoms');

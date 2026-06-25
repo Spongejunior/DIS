@@ -8,110 +8,115 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-bar-chart"></i> Reports & Analytics Dashboard</h2>
-    <div class="btn-group">
-        <button class="btn btn-outline-primary" onclick="exportAllReports()">
-            <i class="bi bi-download"></i> Export All Reports
-        </button>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h2><i class="bi bi-bar-chart"></i> Reports &amp; Analytics</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('org_reports_pdf', location=f_location, animal_type=f_animal, days=f_days) }}" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </a>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-            <i class="bi bi-plus-circle"></i> Generate Custom Report
+            <i class="bi bi-plus-circle"></i> Generate Report
         </button>
     </div>
 </div>
 
-<!-- Report Filters -->
+<!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
-        <form class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Report Period</label>
-                <select class="form-select">
-                    <option>Last 7 days</option>
-                    <option>Last 30 days</option>
-                    <option>Last 90 days</option>
-                    <option>This Month</option>
-                    <option>Last Month</option>
-                    <option>Custom Range</option>
+        <form class="row g-3 align-items-end" method="GET" action="{{ url_for('org_reports') }}">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Location (Block)</label>
+                <select class="form-select" name="location">
+                    <option value="all" {{ 'selected' if f_location == 'all' }}>All blocks</option>
+                    {% for loc in location_options %}
+                    <option value="{{ loc }}" {{ 'selected' if f_location == loc }}>{{ loc }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Report Type</label>
-                <select class="form-select">
-                    <option>All Reports</option>
-                    <option>Performance Reports</option>
-                    <option>Financial Reports</option>
-                    <option>User Activity</option>
-                    <option>System Health</option>
-                    <option>Disease Trends</option>
+                <label class="form-label small fw-bold text-muted">Animal Type</label>
+                <select class="form-select" name="animal_type">
+                    <option value="all" {{ 'selected' if f_animal == 'all' }}>All species</option>
+                    <option value="cattle" {{ 'selected' if f_animal == 'cattle' }}>Cattle</option>
+                    <option value="goat" {{ 'selected' if f_animal == 'goat' }}>Goat</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Region</label>
-                <select class="form-select">
-                    <option>All Regions</option>
-                    <option>Central Region</option>
-                    <option>Northern Region</option>
-                    <option>Southern Region</option>
-                    <option>Eastern Region</option>
+                <label class="form-label small fw-bold text-muted">Period</label>
+                <select class="form-select" name="days">
+                    <option value="7" {{ 'selected' if f_days == 7 }}>Last 7 days</option>
+                    <option value="14" {{ 'selected' if f_days == 14 }}>Last 14 days</option>
+                    <option value="30" {{ 'selected' if f_days == 30 }}>Last 30 days</option>
+                    <option value="90" {{ 'selected' if f_days == 90 }}>Last 90 days</option>
+                    <option value="365" {{ 'selected' if f_days == 365 }}>Last year</option>
                 </select>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
-                <button type="submit" class="btn btn-primary w-100">Generate</button>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-funnel"></i> Apply</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Report Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Monthly Performance</h5>
-                <h2 class="text-primary">89.2%</h2>
-                <small>System Accuracy</small>
-                <button class="btn btn-sm btn-outline-primary mt-2 w-100">View Report</button>
+<!-- Most Frequent Diseases (trend) -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Most Frequent Diseases (Last {{ f_days }} days)</h6></div>
+            <div class="card-body">
+                {% if disease_labels %}
+                    <canvas id="diseaseChart" height="220"></canvas>
+                {% else %}
+                    <p class="text-muted text-center py-5 mb-0">No predictions for the selected filters.</p>
+                {% endif %}
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">User Growth</h5>
-                <h2 class="text-success">+12%</h2>
-                <small>This Month</small>
-                <button class="btn btn-sm btn-outline-success mt-2 w-100">View Report</button>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Ranking</h6></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead><tr><th>#</th><th>Disease</th><th>Cases</th><th>Share</th></tr></thead>
+                        <tbody>
+                            {% set total = disease_values|sum %}
+                            {% if disease_rows %}
+                                {% for name, count in disease_rows %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ name }}</td>
+                                    <td>{{ count }}</td>
+                                    <td>{{ ((count / total) * 100)|round(1) if total else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-muted py-3">No data.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Mortality Rate</h5>
-                <h2 class="text-warning">2.3%</h2>
-                <small>of total animals</small>
-                <button class="btn btn-sm btn-outline-warning mt-2 w-100">View Report</button>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Response Time</h5>
-                <h2 class="text-info">2.4h</h2>
-                <small>Average</small>
-                <button class="btn btn-sm btn-outline-info mt-2 w-100">View Report</button>
-            </div>
-        </div>
+</div>
+
+<!-- Disease Trend -->
+<div class="card mb-4">
+    <div class="card-header"><h6 class="mb-0">Disease Trend Over Time</h6></div>
+    <div class="card-body">
+        {% if trend_labels %}
+            <canvas id="trendChart" height="90"></canvas>
+        {% else %}
+            <p class="text-muted text-center py-4 mb-0">Not enough data to show a trend for the selected filters.</p>
+        {% endif %}
     </div>
 </div>
 
 <!-- Available Reports -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Available Reports</h5>
+        <h5 class="mb-0">Generated Reports</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -119,217 +124,106 @@
                 <thead>
                     <tr>
                         <th>Report ID</th>
-                        <th>Report Name</th>
                         <th>Type</th>
                         <th>Period</th>
                         <th>Generated</th>
-                        <th>Size</th>
-                        <th>Actions</th>
+                        <th>Schedule</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>REP-2024-03-001</td>
-                        <td><strong>Monthly Performance Report</strong></td>
-                        <td><span class="badge bg-primary">Performance</span></td>
-                        <td>March 2024</td>
-                        <td>Today, 09:15 AM</td>
-                        <td>2.4 MB</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>REP-2024-03-002</td>
-                        <td>Weekly Disease Trends</td>
-                        <td><span class="badge bg-warning">Trends</span></td>
-                        <td>Mar 11-17, 2024</td>
-                        <td>Yesterday</td>
-                        <td>1.8 MB</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>REP-2024-03-003</td>
-                        <td>User Activity Analysis</td>
-                        <td><span class="badge bg-info">User</span></td>
-                        <td>Last 30 days</td>
-                        <td>Mar 15, 2024</td>
-                        <td>3.2 MB</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>REP-2024-02-028</td>
-                        <td>February Financial Summary</td>
-                        <td><span class="badge bg-success">Financial</span></td>
-                        <td>February 2024</td>
-                        <td>Mar 1, 2024</td>
-                        <td>4.1 MB</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>REP-2024-02-027</td>
-                        <td>System Health Dashboard</td>
-                        <td><span class="badge bg-secondary">System</span></td>
-                        <td>February 2024</td>
-                        <td>Feb 28, 2024</td>
-                        <td>2.7 MB</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </td>
-                    </tr>
+                    {% if reports %}
+                        {% for r in reports %}
+                        <tr>
+                            <td><strong>{{ r.report_id }}</strong></td>
+                            <td><span class="badge bg-primary text-capitalize">{{ r.report_type }}</span></td>
+                            <td>
+                                {{ r.period_start.strftime('%Y-%m-%d') if r.period_start else '--' }}
+                                &ndash;
+                                {{ r.period_end.strftime('%Y-%m-%d') if r.period_end else '--' }}
+                            </td>
+                            <td>{{ r.generated_at.strftime('%Y-%m-%d %H:%M') if r.generated_at else '--' }}</td>
+                            <td>
+                                {% if r.is_scheduled %}
+                                    <span class="badge bg-info text-capitalize">{{ r.schedule_frequency }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Once</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No reports generated yet.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-        
-        <!-- Pagination -->
-        <nav>
-            <ul class="pagination justify-content-center">
-                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-            </ul>
-        </nav>
     </div>
 </div>
 
-<!-- Analytics Dashboard -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">Analytics Dashboard</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h6>Disease Distribution (Last 30 days)</h6>
-                <div class="border rounded p-3 text-center" style="height: 250px; background-color: #f8f9fa;">
-                    <p class="mt-5"><i class="bi bi-pie-chart" style="font-size: 4rem; color: #6c757d;"></i></p>
-                    <p>Pie chart: Respiratory 35%, Parasitic 28%, Nutritional 20%, Other 17%</p>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <h6>User Growth Trend</h6>
-                <div class="border rounded p-3 text-center" style="height: 250px; background-color: #f8f9fa;">
-                    <p class="mt-5"><i class="bi bi-graph-up" style="font-size: 4rem; color: #6c757d;"></i></p>
-                    <p>Line chart showing monthly user growth and activity</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <h6>Regional Performance</h6>
+<!-- Dominant disease by location -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Dominant Disease by Location (Last {{ f_days }} days)</h6></div>
+            <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
-                            <tr>
-                                <th>Region</th>
-                                <th>Farmers</th>
-                                <th>Predictions</th>
-                                <th>Accuracy</th>
-                                <th>Mortality</th>
-                            </tr>
+                            <tr><th>Location</th><th>Most Common Disease</th><th>Cases</th></tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td>Central</td>
-                                <td>58</td>
-                                <td>245</td>
-                                <td>91.2%</td>
-                                <td>2.1%</td>
-                            </tr>
-                            <tr>
-                                <td>Northern</td>
-                                <td>42</td>
-                                <td>182</td>
-                                <td>88.7%</td>
-                                <td>2.8%</td>
-                            </tr>
-                            <tr>
-                                <td>Southern</td>
-                                <td>38</td>
-                                <td>156</td>
-                                <td>87.5%</td>
-                                <td>3.2%</td>
-                            </tr>
-                            <tr>
-                                <td>Eastern</td>
-                                <td>18</td>
-                                <td>74</td>
-                                <td>89.4%</td>
-                                <td>1.8%</td>
-                            </tr>
+                            {% if location_disease_summary %}
+                                {% for row in location_disease_summary %}
+                                <tr>
+                                    <td>{{ row.location }}</td>
+                                    <td>{{ row.disease_name }}</td>
+                                    <td>{{ row.frequency }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="3" class="text-center text-muted py-3">No data yet.</td></tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="col-md-6">
-                <h6>Top Performing Veterinarians</h6>
-                <div class="list-group">
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">Dr. Sarah Smith</h6>
-                            <small>Central Region</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-success">94% Accuracy</span>
-                            <span class="badge bg-primary">42 Farmers</span>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">Dr. James Wilson</h6>
-                            <small>Northern Region</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-success">92% Accuracy</span>
-                            <span class="badge bg-primary">38 Farmers</span>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">Dr. Maria Garcia</h6>
-                            <small>Southern Region</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-success">90% Accuracy</span>
-                            <span class="badge bg-primary">35 Farmers</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Veterinarian performance -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Veterinarian Activity</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Veterinarian</th>
+                        <th>Service Location</th>
+                        <th>Status</th>
+                        <th>Reviews Completed</th>
+                        <th>Assigned Farmers</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if veterinarian_summary %}
+                        {% for v in veterinarian_summary %}
+                        <tr>
+                            <td>{{ v.full_name }}</td>
+                            <td>{{ v.service_location }}</td>
+                            <td><span class="badge bg-{{ 'success' if v.status == 'approved' else 'secondary' }} text-capitalize">{{ v.status }}</span></td>
+                            <td>{{ v.reviewed_predictions_count }}</td>
+                            <td>{{ v.assigned_farmers_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">No veterinarians registered yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -337,125 +231,84 @@
 <!-- Generate Report Modal -->
 <div class="modal fade" id="generateReportModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <form class="modal-content" method="POST" action="{{ url_for('org_reports') }}">
+            {{ form.hidden_tag() }}
             <div class="modal-header">
-                <h5 class="modal-title">Generate Custom Report</h5>
+                <h5 class="modal-title">Generate Report</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Report Name</label>
-                            <input type="text" class="form-control" placeholder="Enter report name">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Report Type</label>
-                            <select class="form-select">
-                                <option>Performance Analysis</option>
-                                <option>User Activity</option>
-                                <option>Financial Summary</option>
-                                <option>Disease Trends</option>
-                                <option>System Health</option>
-                                <option>Custom</option>
-                            </select>
-                        </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.report_name.label(class="form-label") }}
+                        {{ form.report_name(class="form-control") }}
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control">
-                        </div>
+                    <div class="col-md-6">
+                        {{ form.report_type.label(class="form-label") }}
+                        {{ form.report_type(class="form-select") }}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Data Points to Include</label>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="userGrowth" checked>
-                                    <label class="form-check-label" for="userGrowth">User Growth</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="predictions" checked>
-                                    <label class="form-check-label" for="predictions">Predictions</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="accuracy" checked>
-                                    <label class="form-check-label" for="accuracy">Accuracy Rates</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="mortality">
-                                    <label class="form-check-label" for="mortality">Mortality Data</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="financial">
-                                    <label class="form-check-label" for="financial">Financial Data</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="regional">
-                                    <label class="form-check-label" for="regional">Regional Data</label>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-6">
+                        {{ form.animal_type.label(class="form-label") }}
+                        {{ form.animal_type(class="form-select") }}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Output Format</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="format" id="pdf" checked>
-                            <label class="form-check-label" for="pdf">PDF</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="format" id="excel">
-                            <label class="form-check-label" for="excel">Excel</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="format" id="csv">
-                            <label class="form-check-label" for="csv">CSV</label>
-                        </div>
+                    <div class="col-md-6">
+                        {{ form.output_format.label(class="form-label") }}
+                        {{ form.output_format(class="form-select") }}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Schedule Report (Optional)</label>
-                        <select class="form-select">
-                            <option>Generate once</option>
-                            <option>Daily</option>
-                            <option>Weekly</option>
-                            <option>Monthly</option>
-                        </select>
+                    <div class="col-md-6">
+                        {{ form.period_start.label(class="form-label") }}
+                        {{ form.period_start(class="form-control") }}
                     </div>
-                </form>
+                    <div class="col-md-6">
+                        {{ form.period_end.label(class="form-label") }}
+                        {{ form.period_end(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.schedule_frequency.label(class="form-label") }}
+                        {{ form.schedule_frequency(class="form-select") }}
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Generate Report</button>
+                {{ form.submit(class="btn btn-primary") }}
             </div>
-        </div>
+        </form>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+{% if disease_labels or trend_labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-function exportAllReports() {
-    if (confirm('Export all available reports as ZIP file?')) {
-        alert('Report export initiated. Download will start shortly.');
-        // Implement actual functionality here
-    }
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const palette = ['#1a4a2e','#2c7744','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#10b981','#6c757d'];
+    {% if disease_labels %}
+    new Chart(document.getElementById('diseaseChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ disease_labels|tojson }},
+            datasets: [{ label: 'Cases', data: {{ disease_values|tojson }}, backgroundColor: palette }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                   plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+    });
+    {% endif %}
+    {% if trend_labels %}
+    new Chart(document.getElementById('trendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: {{ trend_labels|tojson }},
+            datasets: [{ label: 'Predictions', data: {{ trend_values|tojson }},
+                         borderColor: '#2c7744', backgroundColor: 'rgba(44,119,68,0.15)',
+                         fill: true, tension: 0.3 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false,
+                   scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+    {% endif %}
+});
 </script>
+{% endif %}
 {% endblock %}
