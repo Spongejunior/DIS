@@ -61,10 +61,15 @@
                         <img src="https://cdn.phototourl.com/free/2026-06-24-a9d92bbe-d728-4a4d-9c7d-1614cb350cb6.jpg" alt="Healthy livestock">
                     </div>
 
-                    {# Moved goat picture under hero content (left aligned) #}
-                    <div class="hero-goat">
-                        <img src="{{ url_for('static', filename='images/goat.jpg') }}" alt="Goat">
+                    
+                    {# Separate floating goat card (left side) #}
+                    <div class="goat-card-floating">
+                        <div class="goat-card-image">
+                            <img src="{{ url_for('static', filename='images/goat.jpg') }}" alt="Goat">
+                        </div>
+                        <div class="goat-card-badge">Goat care</div>
                     </div>
+
 
                     <div class="hero-card hero-card-floating">
                         <p class="metric-label">Average response flow</p>
