@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 PROJECT_VENDOR_PATH = os.path.join(os.path.dirname(__file__), '.vendor')
 if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
@@ -10,9 +11,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash
 from datetime import datetime, date, timedelta, timezone
 import json
-import random
-import string
-from functools import wraps
+from functools import lru_cache, wraps
 from sqlalchemy import text
 
 def get_malawi_time():
@@ -36,6 +35,12 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+
+SUPPORTED_ANIMAL_TYPES = {'cattle', 'goat'}
+MODEL_DIRECTORY = Path(__file__).resolve().parent / 'model'
+MODEL_PATH = MODEL_DIRECTORY / 'livestock_disease_model.pkl'
+LABEL_ENCODER_PATH = MODEL_DIRECTORY / 'global_categorical_encoder.pkl'
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -91,6 +96,43 @@ def get_assigned_veterinarians(user):
     assigned_veterinarians = user.assigned_veterinarians
     return assigned_veterinarians.all() if hasattr(assigned_veterinarians, 'all') else list(assigned_veterinarians)
 
+def auto_assign_by_location(user):
+    normalized_location = (user.location or '').strip()
+    if not normalized_location or not user.is_approved_user():
+        return 0
+
+    assignments_created = 0
+
+    if user.is_farmer():
+        existing_vet_ids = {vet.id for vet in get_assigned_veterinarians(user)}
+        matching_vets = User.query.filter(
+            User.role == 'veterinarian',
+            User.status == 'approved',
+            User.location == normalized_location
+        ).order_by(User.id.asc()).all()
+
+        for vet in matching_vets:
+            if vet.id in existing_vet_ids:
+                continue
+            vet.assigned_farmers.append(user)
+            assignments_created += 1
+
+    elif user.is_veterinarian():
+        existing_farmer_ids = {farmer.id for farmer in get_assigned_farmers(user)}
+        matching_farmers = User.query.filter(
+            User.role == 'farmer',
+            User.status == 'approved',
+            User.location == normalized_location
+        ).order_by(User.id.asc()).all()
+
+        for farmer in matching_farmers:
+            if farmer.id in existing_farmer_ids:
+                continue
+            user.assigned_farmers.append(farmer)
+            assignments_created += 1
+
+    return assignments_created
+
 def get_notification_action_url(notification_type, related_id=None):
     if not related_id:
         return None
@@ -103,6 +145,90 @@ def get_notification_action_url(notification_type, related_id=None):
     }
     endpoint = routes.get(notification_type)
     return url_for(endpoint) if endpoint else None
+
+
+@lru_cache(maxsize=1)
+def load_prediction_artifacts():
+    try:
+        import joblib
+        import pandas as pd
+    except ImportError as exc:
+        raise RuntimeError(
+            'Prediction dependencies are not installed. Add pandas, joblib, and the model runtime packages to run predictions.'
+        ) from exc
+
+    if not MODEL_PATH.exists():
+        raise RuntimeError(f'Model file not found: {MODEL_PATH}')
+    if not LABEL_ENCODER_PATH.exists():
+        raise RuntimeError(f'Label encoder file not found: {LABEL_ENCODER_PATH}')
+
+    model = joblib.load(MODEL_PATH)
+    label_encoder = joblib.load(LABEL_ENCODER_PATH)
+    return pd, model, label_encoder
+
+
+def infer_malawi_season(reference_time=None):
+    month = (reference_time or get_malawi_time()).month
+    if month in {11, 12, 1, 2, 3, 4}:
+        return 'rainy'
+    if month in {5, 6, 7, 8}:
+        return 'cold_dry'
+    return 'hot_dry'
+
+
+def normalize_symptom_name(symptom):
+    return (symptom or '').strip().lower()
+
+
+def build_model_features(report):
+    symptoms = [normalize_symptom_name(symptom) for symptom in report.get_additional_symptoms_list()]
+    symptoms = [symptom for symptom in symptoms if symptom]
+    unique_symptoms = list(dict.fromkeys(symptoms))
+    symptom_slots = (unique_symptoms + ['not_recorded'] * 7)[:7]
+
+    return {
+        'season': infer_malawi_season(report.created_at),
+        'specie': report.animal_type,
+        'sex': 'unknown',
+        'age(month)': float(report.animal_age or 0),
+        'temperature': float(report.temperature or 0),
+        'symptom1': symptom_slots[0],
+        'symptom2': symptom_slots[1],
+        'symptom3': symptom_slots[2],
+        'symptom4': symptom_slots[3],
+        'symptom5': symptom_slots[4],
+        'symptom6': symptom_slots[5],
+        'symptom7': symptom_slots[6],
+    }
+
+
+def decode_model_label(raw_label, label_encoder):
+    if isinstance(raw_label, str):
+        return raw_label
+    return str(label_encoder.inverse_transform([int(raw_label)])[0])
+
+
+def categorize_disease(disease_name):
+    disease = (disease_name or '').lower()
+    if any(term in disease for term in ('pneumonia', 'respiratory', 'cough')):
+        return 'respiratory'
+    if any(term in disease for term in ('parasite', 'parasitic', 'worm')):
+        return 'parasitic'
+    if any(term in disease for term in ('mastitis', 'udder', 'milk')):
+        return 'production'
+    if any(term in disease for term in ('bloat', 'diarrhea', 'enterotoxemia', 'digest')):
+        return 'digestive'
+    return 'general'
+
+
+def confidence_to_severity(confidence):
+    if confidence >= 0.9:
+        return 'critical'
+    if confidence >= 0.75:
+        return 'severe'
+    if confidence >= 0.6:
+        return 'moderate'
+    return 'mild'
 
 def log_system_event(level, component, message, user_id=None, details=None):
     log = SystemLog(
@@ -150,14 +276,84 @@ def create_notification(user_id, notification_type, title, message, priority='me
     db.session.add(notification)
     db.session.commit()
 
-# NOTE:
-# Default users were previously hardcoded and seeded at startup.
-# This has been removed so that user/admin/vet data is sourced from the database only.
+def create_default_users():
+    # Create system admin if not exists
+    if not User.query.filter_by(username='sysadmin').first():
+        sysadmin = User(
+            username='sysadmin',
+            email='sysadmin@animalhealth.com',
+            full_name='System Administrator',
+            role='system_admin',
+            location='Headquarters',
+            status='approved',
+            approved_at=get_malawi_time()
+        )
+        sysadmin.set_password('pass123')
+        db.session.add(sysadmin)
+    
+    # Create organization admin if not exists
+    if not User.query.filter_by(username='orgadmin').first():
+        orgadmin = User(
+            username='orgadmin',
+            email='orgadmin@animalhealth.com',
+            full_name='Organization Administrator',
+            role='organization_admin',
+            location='Headquarters',
+            status='approved',
+            approved_at=get_malawi_time()
+        )
+        orgadmin.set_password('pass123')
+        db.session.add(orgadmin)
+    
+    # Create sample veterinarian
+    if not User.query.filter_by(username='vet1').first():
+        vet = User(
+            username='vet1',
+            email='vet1@animalhealth.com',
+            full_name='Dr. Sarah Smith',
+            phone='+1 (555) 987-6543',
+            role='veterinarian',
+            location='Pherembe',
+            status='approved',
+            approved_at=get_malawi_time()
+        )
+        vet.set_password('pass123')
+        db.session.add(vet)
+    
+    # Create sample farmer
+    if not User.query.filter_by(username='farmer1').first():
+        farmer = User(
+            username='farmer1',
+            email='farmer1@example.com',
+            full_name='John Farmer',
+            phone='+1 (555) 123-4567',
+            role='farmer',
+            location='Zombwe',
+            farm_name='Green Valley Farm',
+            animal_types='Cattle,Goats',
+            production_focus='dairy',
+            status='approved',
+            approved_at=get_malawi_time()
+            )
+        farmer.set_password('pass123')
+        db.session.add(farmer)
 
+    existing_default_users = User.query.filter(
+        User.username.in_(['sysadmin', 'orgadmin', 'vet1', 'farmer1'])
+    ).all()
+    for user in existing_default_users:
+        user.status = 'approved'
+        if not user.approved_at:
+            user.approved_at = get_malawi_time()
+        user.rejected_at = None
+
+    db.session.commit()
+
+# Create tables and seed default users after helper definitions are available
 with app.app_context():
     db.create_all()
     ensure_user_approval_columns()
-
+    create_default_users()
 
 # Routes
 @app.route('/landing')
@@ -256,7 +452,6 @@ def dashboard():
 @login_required
 @role_required('farmer')
 def farmer_dashboard():
-
     # Get statistics
     total_reports = SymptomReport.query.filter_by(farmer_id=current_user.id).count()
     pending_predictions = SymptomReport.query.filter_by(
@@ -286,39 +481,11 @@ def farmer_dashboard():
 @role_required('farmer')
 def symptom_form():
     form = SymptomForm()
-
-    # Hard debug: always show what the server received.
-    # This helps identify why predictions are not being created after Submit & Predict.
-    if request.method == 'POST':
-        app.logger.warning(
-            'symptom_form POST: user_id=%s, animal_type=%r, temperature=%r, symptoms_count=%s, valid=%s',
-            getattr(current_user, 'id', None),
-            request.form.get('animal_type'),
-            request.form.get('temperature'),
-            len(request.form.getlist('symptoms')),
-            form.validate()
-        )
-        try:
-            # Save a system log record so you can view it in /system/logs
-            log_system_event(
-                'warning',
-                'prediction',
-                'symptom_form POST received',
-                current_user.id,
-                details={
-                    'animal_type': request.form.get('animal_type'),
-                    'animal_age': request.form.get('animal_age'),
-                    'animal_weight': request.form.get('animal_weight'),
-                    'temperature': request.form.get('temperature'),
-                    'symptoms_count': len(request.form.getlist('symptoms')),
-                    'form_errors': form.errors,
-                }
-            )
-        except Exception:
-            # Do not block the request if logging fails
-            pass
-
     if form.validate_on_submit():
+        if form.animal_type.data not in SUPPORTED_ANIMAL_TYPES:
+            flash('Only cattle and goat cases are supported for prediction.', 'danger')
+            return render_template('farmer/symptom_form.html', form=form)
+
         report_id = generate_report_id()
         selected_symptoms = request.form.getlist('symptoms')
         combined_symptoms = selected_symptoms.copy()
@@ -333,9 +500,11 @@ def symptom_form():
             animal_age=form.animal_age.data,
             animal_weight=form.animal_weight.data,
             animal_breed=None,
+            appetite=form.appetite.data,
             temperature=form.temperature.data,
             heart_rate=form.heart_rate.data,
             respiration_rate=form.respiration_rate.data,
+            rumen_movement=form.rumen_movement.data,
             stool_consistency=form.stool_consistency.data,
             milk_production=form.milk_production.data,
             additional_symptoms=json.dumps(combined_symptoms),
@@ -347,10 +516,19 @@ def symptom_form():
         )
         db.session.add(report)
         db.session.commit()
-        
-        # Create prediction using the model pipeline
-        prediction = create_prediction(report)
 
+        try:
+            prediction = create_prediction(report)
+        except Exception as exc:
+            log_system_event(
+                'error',
+                'model',
+                f'Model prediction failed for report {report.report_id}',
+                current_user.id,
+                {'report_id': report.report_id, 'animal_type': report.animal_type, 'error': str(exc)}
+            )
+            flash('Symptoms were saved, but the trained model could not generate a prediction. Please contact the administrator.', 'danger')
+            return redirect(url_for('symptom_history'))
         
         # Create notification for farmer
         create_notification(
@@ -379,165 +557,53 @@ def symptom_form():
     
     return render_template('farmer/symptom_form.html', form=form)
 
-def run_model_prediction(report):
-    """Run ML inference using model/livestock_disease_model.pkl.
-
-    Returns a dict with keys:
-      - disease_name (str)
-      - disease_category (str)
-      - confidence (float 0..1)
-      - severity (str)
-      - possible_diseases (list[str])
-      - recommendation_text (str)
-      - model_version (str)
-      - features_used (dict/any serializable)
-    """
-    import joblib
-    import numpy as np
-
-    model_path = os.path.join(os.path.dirname(__file__), 'model', 'livestock_disease_model.pkl')
-    # fallback if relative path differs
-    if not os.path.exists(model_path):
-        model_path = os.path.join(os.path.dirname(__file__), 'model', 'livestock_disease_model.pkl')
-
-    model = joblib.load(model_path)
-
-    # Build feature vector based on common fields stored in SymptomReport.
-    # IMPORTANT: your training pipeline likely includes preprocessing inside the saved estimator.
-    # We pass a single-row dataframe with expected raw feature names as stored.
-    try:
-        import pandas as pd
-        X = pd.DataFrame([{
-            'animal_type': report.animal_type,
-            'animal_age': report.animal_age,
-            'animal_weight': report.animal_weight,
-            'appetite': report.appetite,
-            'temperature': report.temperature,
-            'heart_rate': report.heart_rate,
-            'respiration_rate': report.respiration_rate,
-            'rumen_movement': report.rumen_movement,
-            'stool_consistency': report.stool_consistency,
-            'milk_production': report.milk_production,
-            'additional_symptoms': report.additional_symptoms,
-            'feed_type': report.feed_type,
-            'housing_conditions': report.housing_conditions,
-            'feed_changes': report.feed_changes,
-            'recent_treatments': report.recent_treatments,
-        }])
-    except Exception:
-        # last-resort: numeric array cannot be guaranteed; return safe default
-        return {
-            'disease_name': 'Unknown',
-            'disease_category': 'general',
-            'confidence': 0.5,
-            'severity': 'moderate',
-            'possible_diseases': [],
-            'recommendation_text': (
-                'Isolate the animal immediately to reduce possible spread and monitor closely. '
-                'Do not start/continue antibiotics without veterinarian prescription. '
-                'Contact the veterinarian for diagnosis and prescription.'
-            ),
-            'model_version': None,
-            'features_used': {'report_id': report.report_id},
-        }
-
-    # Predict probabilities when available.
-    if hasattr(model, 'predict_proba'):
-        proba = model.predict_proba(X)
-        # pick class with max probability
-        idx = int(np.argmax(proba[0]))
-        confidence = float(proba[0][idx])
-        # class label
-        if hasattr(model, 'classes_'):
-            disease_name = str(model.classes_[idx])
-        else:
-            disease_name = 'Unknown'
-    else:
-        disease_name = str(model.predict(X)[0])
-        confidence = 0.5
-
-    # Map severity from confidence (simple heuristic)
-    if confidence >= 0.9:
-        severity = 'critical'
-    elif confidence >= 0.75:
-        severity = 'severe'
-    elif confidence >= 0.6:
-        severity = 'moderate'
-    else:
-        severity = 'mild'
-
-    disease_category = 'general'
-    possible_diseases = []
-    if hasattr(model, 'classes_') and hasattr(model, 'predict_proba'):
-        # top-3 probabilities for transparency
-        top_idx = np.argsort(proba[0])[::-1][:3]
-        possible_diseases = [
-            {'disease': str(model.classes_[i]), 'probability': float(proba[0][i])}
-            for i in top_idx
-        ]
-
-    recommendation_text = (
-        'Containment first: isolate the affected animal from the herd/barn immediately to prevent possible spread. '
-        'Keep the area clean and reduce animal-to-animal contact. '
-        'Do not administer antibiotics/antiparasitics without a veterinarian prescription. '
-        'Monitor the animal closely (temperature, breathing, appetite) and wait for vet instructions.'
-    )
-
-    model_version = None
-    try:
-        cfg = Configuration.query.filter_by(category='general', key='model_version').first()
-        model_version = cfg.value if cfg else None
-    except Exception:
-        model_version = None
-
-    return {
-        'disease_name': disease_name,
-        'disease_category': disease_category,
-        'confidence': confidence,
-        'severity': severity,
-        'possible_diseases': possible_diseases,
-        'recommendation_text': recommendation_text,
-        'model_version': model_version,
-        'features_used': {
-            'animal_type': report.animal_type,
-            'animal_age': report.animal_age,
-            'animal_weight': report.animal_weight,
-            'temperature': report.temperature,
-            'heart_rate': report.heart_rate,
-            'respiration_rate': report.respiration_rate,
-            'stool_consistency': report.stool_consistency,
-            'milk_production': report.milk_production,
-            'housing_conditions': report.housing_conditions,
-            'additional_symptoms': report.additional_symptoms,
-        }
-    }
-
-
 def create_prediction(report):
-    prediction_output = run_model_prediction(report)
+    if report.animal_type not in SUPPORTED_ANIMAL_TYPES:
+        raise ValueError(f'Unsupported animal type for model prediction: {report.animal_type}')
 
+    pd, model, label_encoder = load_prediction_artifacts()
+    features = build_model_features(report)
+    feature_frame = pd.DataFrame([features])
+
+    raw_prediction = model.predict(feature_frame)[0]
+    disease_name = decode_model_label(raw_prediction, label_encoder)
+    confidence = 0.0
+    possible_diseases = [{'disease': disease_name, 'probability': 1.0}]
+
+    if hasattr(model, 'predict_proba'):
+        probabilities = model.predict_proba(feature_frame)[0]
+        model_classes = getattr(model, 'classes_', range(len(probabilities)))
+        ranked_indices = sorted(range(len(probabilities)), key=lambda idx: float(probabilities[idx]), reverse=True)
+        possible_diseases = [
+            {
+                'disease': decode_model_label(model_classes[idx], label_encoder),
+                'probability': round(float(probabilities[idx]), 4)
+            }
+            for idx in ranked_indices[:3]
+        ]
+        confidence = float(probabilities[ranked_indices[0]])
 
     prediction = Prediction(
         prediction_id=generate_prediction_id(),
         symptom_report_id=report.id,
         user_id=report.farmer_id,
-        disease_name=prediction_output.get('disease_name'),
-        disease_category=prediction_output.get('disease_category'),
-        confidence=prediction_output.get('confidence'),
-        severity=prediction_output.get('severity'),
-        recommendation_text=prediction_output.get('recommendation_text'),
-        model_version=prediction_output.get('model_version') or None,
-        possible_diseases=json.dumps(prediction_output.get('possible_diseases') or []),
-        features_used=json.dumps(prediction_output.get('features_used') or {}),
-        review_status='pending'
+        disease_name=disease_name,
+        disease_category=categorize_disease(disease_name),
+        confidence=confidence,
+        severity=confidence_to_severity(confidence),
+        model_version='model.pkl',
+        possible_diseases=json.dumps(possible_diseases),
+        review_status='pending',
+        features_used=json.dumps(features)
     )
-
+    
+    # Update report status
     report.status = 'predicted'
+    
     db.session.add(prediction)
     db.session.commit()
-
+    
     return prediction
-
 
 @app.route('/farmer/symptoms/history')
 @login_required
@@ -591,6 +657,8 @@ def farmer_registration():
         current_user.specific_location = form.specific_location.data
         current_user.animal_types = form.animal_types.data
         current_user.production_focus = form.production_focus.data
+
+        auto_assign_by_location(current_user)
         
         db.session.commit()
         flash('Profile updated successfully!', 'success')
@@ -667,6 +735,8 @@ def vet_profile():
         current_user.phone = form.phone.data
         current_user.location = form.location.data
         current_user.specific_location = form.specific_location.data
+
+        auto_assign_by_location(current_user)
 
         db.session.commit()
         flash('Profile updated successfully!', 'success')
@@ -898,6 +968,7 @@ def approve_user(user_id):
     user.status = 'approved'
     user.approved_at = get_malawi_time()
     user.rejected_at = None
+    auto_assign_by_location(user)
     db.session.commit()
 
     send_approval_email(app, user.email)
@@ -980,10 +1051,97 @@ def org_reports():
     
     # Get existing reports
     reports = Report.query.order_by(Report.generated_at.desc()).limit(20).all()
+
+    thirty_days_ago = get_malawi_time() - timedelta(days=30)
+    disease_distribution = db.session.query(
+        Prediction.disease_name,
+        db.func.count(Prediction.id)
+    ).filter(
+        Prediction.predicted_at >= thirty_days_ago
+    ).group_by(
+        Prediction.disease_name
+    ).order_by(
+        db.func.count(Prediction.id).desc(),
+        Prediction.disease_name.asc()
+    ).all()
+
+    disease_labels = [name if name else 'Unknown disease' for name, _ in disease_distribution]
+    disease_values = [count for _, count in disease_distribution]
+
+    approved_locations = [
+        value for value, _ in REGISTRATION_LOCATION_CHOICES if value
+    ]
+    location_disease_counts = db.session.query(
+        User.location,
+        Prediction.disease_name,
+        db.func.count(Prediction.id)
+    ).join(
+        SymptomReport, SymptomReport.farmer_id == User.id
+    ).join(
+        Prediction, Prediction.symptom_report_id == SymptomReport.id
+    ).filter(
+        User.role == 'farmer',
+        User.location.in_(approved_locations),
+        Prediction.predicted_at >= thirty_days_ago
+    ).group_by(
+        User.location,
+        Prediction.disease_name
+    ).all()
+
+    dominant_disease_by_location = {}
+    for location, disease_name, frequency in location_disease_counts:
+        current = dominant_disease_by_location.get(location)
+        candidate = {
+            'location': location,
+            'disease_name': disease_name or 'Unknown disease',
+            'frequency': frequency
+        }
+        if (
+            current is None or
+            frequency > current['frequency'] or
+            (frequency == current['frequency'] and candidate['disease_name'] < current['disease_name'])
+        ):
+            dominant_disease_by_location[location] = candidate
+
+    location_disease_summary = [
+        dominant_disease_by_location.get(location, {
+            'location': location,
+            'disease_name': 'No data yet',
+            'frequency': 0
+        })
+        for location in approved_locations
+    ]
+
+    veterinarian_users = User.query.filter_by(role='veterinarian').order_by(User.full_name.asc()).all()
+    veterinarian_summary = []
+    for vet in veterinarian_users:
+        reviewed_predictions_count = Prediction.query.filter(
+            Prediction.reviewed_by == vet.id,
+            Prediction.review_status.in_(['confirmed', 'modified'])
+        ).count()
+        veterinarian_summary.append({
+            'full_name': vet.full_name or vet.username,
+            'service_location': vet.location or vet.specific_location or 'Location not set',
+            'status': vet.status or 'unknown',
+            'reviewed_predictions_count': reviewed_predictions_count,
+            'assigned_farmers_count': len(get_assigned_farmers(vet))
+        })
+
+    veterinarian_summary.sort(
+        key=lambda item: (
+            -item['reviewed_predictions_count'],
+            -item['assigned_farmers_count'],
+            item['full_name'].lower()
+        )
+    )
     
     return render_template('organization_admin/reports.html',
                          form=form,
-                         reports=reports)
+                         reports=reports,
+                         disease_labels=disease_labels,
+                         disease_values=disease_values,
+                         location_disease_summary=location_disease_summary,
+                         veterinarian_summary=veterinarian_summary)
 
 # System Admin Routes
 @app.route('/system/dashboard')
