@@ -10,6 +10,15 @@ class LoginForm(FlaskForm):
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
+class ForgotPasswordForm(FlaskForm):
+    identity = StringField('Username or Email', validators=[DataRequired(), Length(min=3, max=120)])
+    submit = SubmitField('Send Reset Link')
+
+class ResetPasswordForm(FlaskForm):
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    confirm_new_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password')])
+    submit = SubmitField('Reset Password')
+
 class RegistrationForm(FlaskForm):
     full_name = StringField('Full Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])

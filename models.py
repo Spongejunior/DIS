@@ -37,6 +37,8 @@ class User(UserMixin, db.Model):
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected
     approved_at = db.Column(db.DateTime)
     rejected_at = db.Column(db.DateTime)
+    reset_token = db.Column(db.String(128))
+    reset_token_expires_at = db.Column(db.DateTime)
     
     # Relationships
     symptoms = db.relationship('SymptomReport', backref='farmer', foreign_keys='SymptomReport.farmer_id')
