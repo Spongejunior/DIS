@@ -8,6 +8,9 @@
     <a class="nav-link {% if active_page == 'reviews' %}active{% endif %}" href="{{ url_for('predictions_review') }}">
         <i class="bi bi-clipboard-check"></i> Review Predictions
     </a>
+    <a class="nav-link {% if active_page == 'communications' %}active{% endif %}" href="{{ url_for('vet_communications') }}">
+        <i class="bi bi-chat-square-text"></i> Communications
+    </a>
     <a class="nav-link {% if active_page == 'treatments' %}active{% endif %}" href="{{ url_for('treatment_suggestions') }}">
         <i class="bi bi-capsule"></i> Treatment Suggestions
     </a>

@@ -163,7 +163,10 @@ def get_notification_action_url(notification_type, related_id=None):
         'prediction': 'farmer_predictions',
         'review': 'predictions_review',
         'treatment': 'treatment_suggestions',
-        'mortality': 'mortality_reports'
+        'mortality': 'mortality_reports',
+        'alert': 'farmer_notifications',
+        'meeting': 'farmer_notifications',
+        'message': 'vet_communications'
     }
     endpoint = routes.get(notification_type)
     return url_for(endpoint) if endpoint else None
@@ -314,9 +317,20 @@ def ensure_symptom_report_columns():
 
     db.session.commit()
 
-def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None):
+def ensure_notification_columns():
+    existing_columns = {
+        row[1] for row in db.session.execute(text("PRAGMA table_info('notification')")).fetchall()
+    }
+
+    if 'sender_id' not in existing_columns:
+        db.session.execute(text("ALTER TABLE notification ADD COLUMN sender_id INTEGER"))
+
+    db.session.commit()
+
+def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None, sender_id=None):
     notification = Notification(
         user_id=user_id,
+        sender_id=sender_id,
         notification_type=notification_type,
         title=title,
         message=message,
@@ -326,6 +340,19 @@ def create_notification(user_id, notification_type, title, message, priority='me
     )
     db.session.add(notification)
     db.session.commit()
+
+def build_user_lookup(user_ids):
+    ids = sorted({user_id for user_id in user_ids if user_id})
+    if not ids:
+        return {}
+    users = User.query.filter(User.id.in_(ids)).all()
+    return {user.id: user for user in users}
+
+def build_sender_lookup(notifications):
+    return build_user_lookup(getattr(note, 'sender_id', None) for note in notifications)
+
+def build_recipient_lookup(notifications):
+    return build_user_lookup(getattr(note, 'user_id', None) for note in notifications)
 
 def create_default_users():
     # Create system admin if not exists
@@ -435,6 +462,7 @@ with app.app_context():
     db.create_all()
     ensure_user_approval_columns()
     ensure_symptom_report_columns()
+    ensure_notification_columns()
     create_default_users()
     ensure_model_version_record()
 
@@ -552,12 +580,119 @@ def farmer_dashboard():
         user_id=current_user.id,
         is_read=False
     ).order_by(Notification.created_at.desc()).limit(10).all()
+    notification_senders = build_sender_lookup(notifications)
+    assigned_vets = get_assigned_veterinarians(current_user)
     
     return render_template('farmer/dashboard.html',
                          total_reports=total_reports,
                          pending_predictions=pending_predictions,
                          recent_predictions=recent_predictions,
-                         notifications=notifications)
+                         notifications=notifications,
+                         notification_senders=notification_senders,
+                         assigned_vets=assigned_vets)
+
+@app.route('/farmer/notifications')
+@login_required
+@role_required('farmer')
+def farmer_notifications():
+    active_filter = request.args.get('filter', 'all')
+    base_query = Notification.query.filter_by(user_id=current_user.id)
+
+    if active_filter == 'unread':
+        base_query = base_query.filter_by(is_read=False)
+    elif active_filter == 'meeting':
+        base_query = base_query.filter_by(notification_type='meeting')
+    else:
+        active_filter = 'all'
+
+    notifications = base_query.order_by(Notification.created_at.desc()).all()
+    notification_senders = build_sender_lookup(notifications)
+    all_notifications = Notification.query.filter_by(user_id=current_user.id).all()
+    unread_count = sum(1 for note in all_notifications if not note.is_read)
+    meetings_count = sum(1 for note in all_notifications if note.notification_type == 'meeting')
+
+    return render_template(
+        'farmer/notifications.html',
+        notifications=notifications,
+        notification_senders=notification_senders,
+        unread_count=unread_count,
+        total_notifications=len(all_notifications),
+        meetings_count=meetings_count,
+        active_filter=active_filter
+    )
+
+@app.route('/farmer/notifications/<int:notification_id>')
+@login_required
+@role_required('farmer')
+def farmer_notification_detail(notification_id):
+    notification = Notification.query.get_or_404(notification_id)
+    if notification.user_id != current_user.id:
+        abort(403)
+
+    if not notification.is_read:
+        notification.is_read = True
+        db.session.commit()
+
+    sender = None
+    if notification.sender_id:
+        sender = User.query.get(notification.sender_id)
+
+    return render_template(
+        'farmer/notification_detail.html',
+        notification=notification,
+        sender=sender
+    )
+
+@app.route('/farmer/notifications/mark-all-read', methods=['POST'])
+@login_required
+@role_required('farmer')
+def mark_farmer_notifications_read():
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update(
+        {'is_read': True},
+        synchronize_session=False
+    )
+    db.session.commit()
+    flash('All notifications have been marked as read.', 'success')
+    return redirect(url_for('farmer_notifications'))
+
+
+@app.route('/farmer/contact-vet', methods=['POST'])
+@login_required
+@role_required('farmer')
+def contact_vet():
+    assigned_vets = get_assigned_veterinarians(current_user)
+    if not assigned_vets:
+        flash('You do not have an assigned veterinarian yet.', 'warning')
+        return redirect(url_for('farmer_dashboard'))
+
+    subject = (request.form.get('subject') or '').strip()
+    message = (request.form.get('message') or '').strip()
+
+    if not message:
+        flash('Please enter a message for your veterinarian.', 'danger')
+        return redirect(url_for('farmer_dashboard'))
+
+    title = subject[:200] if subject else f'Message from {current_user.full_name or current_user.username}'
+
+    for vet in assigned_vets:
+        create_notification(
+            vet.id,
+            'message',
+            title,
+            message,
+            'high',
+            sender_id=current_user.id
+        )
+
+    log_system_event(
+        'info',
+        'notification',
+        f'Farmer {current_user.username} contacted assigned veterinarian(s)',
+        current_user.id,
+        {'recipient_count': len(assigned_vets)}
+    )
+    flash('Your message has been sent to your assigned veterinarian.', 'success')
+    return redirect(url_for('farmer_dashboard'))
 
 @app.route('/farmer/symptoms', methods=['GET', 'POST'])
 @login_required
@@ -883,12 +1018,156 @@ def vet_dashboard():
     # Get recent mortality reports
     recent_mortality = MortalityReport.query.filter_by(vet_id=current_user.id)\
         .order_by(MortalityReport.created_at.desc()).limit(5).all()
+    farmer_messages = Notification.query.filter_by(
+        user_id=current_user.id,
+        notification_type='message'
+    ).order_by(Notification.created_at.desc()).limit(8).all()
+    message_senders = build_sender_lookup(farmer_messages)
+    sent_alerts_count = Notification.query.filter_by(
+        sender_id=current_user.id,
+        notification_type='alert'
+    ).count()
+    scheduled_meetings_count = Notification.query.filter_by(
+        sender_id=current_user.id,
+        notification_type='meeting'
+    ).count()
     
     return render_template('veterinarian/dashboard.html',
                          assigned_farmers=assigned_farmers,
+                         assigned_farmer_list=assigned_farmer_list,
                          pending_reviews=pending_reviews,
                          active_treatments=active_treatments,
-                         recent_mortality=recent_mortality)
+                         recent_mortality=recent_mortality,
+                         farmer_messages=farmer_messages,
+                         message_senders=message_senders,
+                         sent_alerts_count=sent_alerts_count,
+                         scheduled_meetings_count=scheduled_meetings_count)
+
+@app.route('/veterinarian/communications')
+@login_required
+@role_required('veterinarian')
+def vet_communications():
+    incoming_messages = Notification.query.filter_by(
+        user_id=current_user.id,
+        notification_type='message'
+    ).order_by(Notification.created_at.desc()).all()
+    sent_alerts = Notification.query.filter_by(
+        sender_id=current_user.id,
+        notification_type='alert'
+    ).order_by(Notification.created_at.desc()).all()
+    scheduled_meetings = Notification.query.filter_by(
+        sender_id=current_user.id,
+        notification_type='meeting'
+    ).order_by(Notification.created_at.desc()).all()
+
+    message_senders = build_sender_lookup(incoming_messages)
+    alert_recipients = build_recipient_lookup(sent_alerts)
+    meeting_recipients = build_recipient_lookup(scheduled_meetings)
+
+    return render_template(
+        'veterinarian/communications.html',
+        incoming_messages=incoming_messages,
+        sent_alerts=sent_alerts,
+        scheduled_meetings=scheduled_meetings,
+        message_senders=message_senders,
+        alert_recipients=alert_recipients,
+        meeting_recipients=meeting_recipients
+    )
+
+
+@app.route('/veterinarian/alerts/send', methods=['POST'])
+@login_required
+@role_required('veterinarian')
+def send_farmer_alert():
+    assigned_farmer_list = get_assigned_farmers(current_user)
+    if not assigned_farmer_list:
+        flash('You do not have any assigned farmers to alert yet.', 'warning')
+        return redirect(url_for('vet_dashboard'))
+
+    subject = (request.form.get('subject') or '').strip()
+    message = (request.form.get('message') or '').strip()
+    priority = (request.form.get('priority') or 'medium').strip().lower()
+    if priority not in {'low', 'medium', 'high', 'critical'}:
+        priority = 'medium'
+
+    if not message:
+        flash('Please enter an alert message before sending.', 'danger')
+        return redirect(url_for('vet_dashboard'))
+
+    title = subject[:200] if subject else f'Farmer Alert from {current_user.full_name or current_user.username}'
+
+    for farmer in assigned_farmer_list:
+        create_notification(
+            farmer.id,
+            'alert',
+            title,
+            message,
+            priority,
+            sender_id=current_user.id
+        )
+
+    log_system_event(
+        'info',
+        'notification',
+        f'Veterinarian {current_user.username} sent a farmer alert broadcast',
+        current_user.id,
+        {'recipient_count': len(assigned_farmer_list), 'priority': priority}
+    )
+    flash(f'Alert sent to {len(assigned_farmer_list)} assigned farmer(s).', 'success')
+    return redirect(url_for('vet_dashboard'))
+
+@app.route('/veterinarian/meetings/schedule', methods=['POST'])
+@login_required
+@role_required('veterinarian')
+def schedule_farmer_meeting():
+    assigned_farmer_list = get_assigned_farmers(current_user)
+    assigned_farmer_map = {str(farmer.id): farmer for farmer in assigned_farmer_list}
+    if not assigned_farmer_map:
+        flash('You do not have any assigned farmers to schedule yet.', 'warning')
+        return redirect(url_for('vet_dashboard'))
+
+    farmer_id = (request.form.get('farmer_id') or '').strip()
+    title = (request.form.get('title') or '').strip()
+    meeting_date = (request.form.get('meeting_date') or '').strip()
+    meeting_time = (request.form.get('meeting_time') or '').strip()
+    location = (request.form.get('location') or '').strip()
+    notes = (request.form.get('notes') or '').strip()
+
+    farmer = assigned_farmer_map.get(farmer_id)
+    if farmer is None:
+        flash('Please select one of your assigned farmers.', 'danger')
+        return redirect(url_for('vet_dashboard'))
+
+    if not meeting_date or not meeting_time or not location:
+        flash('Meeting date, time, and location are required.', 'danger')
+        return redirect(url_for('vet_dashboard'))
+
+    meeting_title = title[:200] if title else 'Veterinary meeting scheduled'
+    meeting_message = (
+        f'Your veterinarian scheduled a meeting on {meeting_date} at {meeting_time} '
+        f'for {location}.'
+    )
+    if notes:
+        meeting_message += f' Notes: {notes}'
+
+    create_notification(
+        farmer.id,
+        'meeting',
+        meeting_title,
+        meeting_message,
+        'high',
+        sender_id=current_user.id
+    )
+
+    log_system_event(
+        'info',
+        'notification',
+        f'Veterinarian {current_user.username} scheduled a meeting with {farmer.username}',
+        current_user.id,
+        {'farmer_id': farmer.id, 'meeting_date': meeting_date, 'meeting_time': meeting_time}
+    )
+    flash(f'Meeting scheduled for {farmer.full_name or farmer.username}.', 'success')
+    return redirect(url_for('vet_communications'))
 
 @app.route('/veterinarian/profile', methods=['GET', 'POST'])
 @login_required
