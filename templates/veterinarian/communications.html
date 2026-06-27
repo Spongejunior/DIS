@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Communications - ChiwetoCare{% endblock %}
+
+{% block sidebar %}
+{% set active_page = 'communications' %}
+{% include "veterinarian/_sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-0 text-dark">Communications</h3>
+        <p class="text-muted mb-0">Review incoming farmer messages, sent alerts, and scheduled meetings.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('vet_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Incoming Messages</div>
+                <div class="display-6 fw-bold">{{ incoming_messages|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Sent Alerts</div>
+                <div class="display-6 fw-bold text-primary">{{ sent_alerts|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Scheduled Meetings</div>
+                <div class="display-6 fw-bold text-success">{{ scheduled_meetings|length }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Incoming Farmer Messages</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if incoming_messages %}
+                        {% for note in incoming_messages %}
+                        {% set sender = message_senders.get(note.sender_id) %}
+                        <div class="list-group-item border-0 px-4 py-3">
+                            <div class="fw-semibold">{{ note.title }}</div>
+                            <div class="small text-muted mb-1">
+                                From {{ (sender.full_name or sender.username) if sender else 'Assigned farmer' }}
+                            </div>
+                            <p class="text-muted mb-1">{{ note.message }}</p>
+                            <div class="small text-muted">{{ note.created_at.strftime('%d %b %Y %H:%M') if note.created_at else '--' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center text-muted">No farmer messages yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Sent Alerts</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if sent_alerts %}
+                        {% for note in sent_alerts %}
+                        {% set recipient = alert_recipients.get(note.user_id) %}
+                        <div class="list-group-item border-0 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="fw-semibold">{{ note.title }}</div>
+                                    <div class="small text-muted">To {{ (recipient.full_name or recipient.username) if recipient else 'Assigned farmer' }}</div>
+                                </div>
+                                <span class="badge bg-{{ 'danger' if note.priority in ['high', 'critical'] else ('warning text-dark' if note.priority == 'medium' else 'primary') }}">
+                                    {{ note.priority|capitalize }}
+                                </span>
+                            </div>
+                            <p class="text-muted mb-1 mt-2">{{ note.message }}</p>
+                            <div class="small text-muted">{{ note.created_at.strftime('%d %b %Y %H:%M') if note.created_at else '--' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center text-muted">No alerts sent yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Scheduled Meetings</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if scheduled_meetings %}
+                        {% for note in scheduled_meetings %}
+                        {% set recipient = meeting_recipients.get(note.user_id) %}
+                        <div class="list-group-item border-0 px-4 py-3">
+                            <div class="fw-semibold">{{ note.title }}</div>
+                            <div class="small text-muted mb-1">With {{ (recipient.full_name or recipient.username) if recipient else 'Assigned farmer' }}</div>
+                            <p class="text-muted mb-1">{{ note.message }}</p>
+                            <div class="small text-muted">{{ note.created_at.strftime('%d %b %Y %H:%M') if note.created_at else '--' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center text-muted">No meetings scheduled yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

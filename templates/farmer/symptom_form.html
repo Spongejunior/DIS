@@ -135,6 +135,20 @@
                     
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-muted d-block mb-3">Common Signs</label>
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="symptomSearch"
+                                    class="form-control border-0 bg-light py-2"
+                                    placeholder="Search symptoms like fever, cough, diarrhea..."
+                                    autocomplete="off">
+                            </div>
+                            <div class="form-text small">Type to quickly find and select symptoms.</div>
+                        </div>
                         <div class="row g-3" id="symptomGrid">
                             {% set common_symptoms = [
                                 "Abnormal milk","Abortion","Anemia","Bleeding from orifices","Blisters in mouth","Bloating","Blood in stool",
@@ -147,7 +161,7 @@
                             ] %}
 
                             {% for s in common_symptoms %}
-                            <div class="col-md-4">
+                            <div class="col-md-4 symptom-option" data-symptom="{{ s|lower }}">
                                 <div class="symptom-tag-card p-2 rounded-3 text-center border cursor-pointer transition-all small fw-medium" 
                                      onclick="toggleSymptom(this)" data-value="{{ s }}">
                                     {{ s }}
@@ -156,6 +170,9 @@
                                 </div>
                             </div>
                             {% endfor %}
+                        </div>
+                        <div id="symptomSearchEmpty" class="text-center text-muted small py-3 d-none">
+                            No symptoms matched your search.
                         </div>
                     </div>
 
@@ -313,6 +330,25 @@ function toggleSymptom(card) {
     checkbox.checked = !checkbox.checked;
 }
 
+function filterSymptoms() {
+    const searchInput = document.getElementById('symptomSearch');
+    const options = document.querySelectorAll('.symptom-option');
+    const emptyState = document.getElementById('symptomSearchEmpty');
+    const query = (searchInput.value || '').trim().toLowerCase();
+    let visibleCount = 0;
+
+    options.forEach(option => {
+        const symptomName = option.getAttribute('data-symptom') || '';
+        const matches = !query || symptomName.includes(query);
+        option.classList.toggle('d-none', !matches);
+        if (matches) {
+            visibleCount += 1;
+        }
+    });
+
+    emptyState.classList.toggle('d-none', visibleCount !== 0);
+}
+
 function populateReview() {
     const type = document.querySelector('select[name="animal_type"]').value;
 
@@ -335,5 +371,7 @@ function populateReview() {
         container.innerHTML = '<span class="text-muted small italic">None selected</span>';
     }
 }
+
+document.getElementById('symptomSearch').addEventListener('input', filterSymptoms);
 </script>
 {% endblock %}

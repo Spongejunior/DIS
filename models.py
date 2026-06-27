@@ -352,6 +352,7 @@ class Notification(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notification_type = db.Column(db.String(50))  # prediction, treatment, mortality, breeding, system_alert
     title = db.Column(db.String(200))
     message = db.Column(db.Text)
