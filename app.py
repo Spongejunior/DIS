@@ -1,5 +1,6 @@
 import os
 import sys
+import secrets
 from pathlib import Path
 
 PROJECT_VENDOR_PATH = os.path.join(os.path.dirname(__file__), '.vendor')
@@ -12,16 +13,24 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, date, timedelta, timezone
 import json
 from functools import lru_cache, wraps
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 def get_malawi_time():
     """Returns the current time in Malawi (UTC+2)"""
     return datetime.now(timezone(timedelta(hours=2)))
 
+def ensure_malawi_datetime(value):
+    if value is None:
+        return None
+    malawi_tz = timezone(timedelta(hours=2))
+    if value.tzinfo is None:
+        return value.replace(tzinfo=malawi_tz)
+    return value.astimezone(malawi_tz)
+
 from config import config
 from models import db, User, SymptomReport, Prediction, Treatment, MortalityReport, SystemLog, PerformanceMetric, ModelVersion, Report, Notification, Configuration
-from forms import LoginForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
-from mail_utils import mail, send_approval_email, send_rejection_email
+from forms import LoginForm, ForgotPasswordForm, ResetPasswordForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
+from mail_utils import mail, send_approval_email, send_rejection_email, send_password_reset_email
 
 try:
     import pdf_utils
@@ -302,6 +311,10 @@ def ensure_user_approval_columns():
         db.session.execute(text("ALTER TABLE user ADD COLUMN production_focus VARCHAR(50)"))
     if 'specific_location' not in existing_columns:
         db.session.execute(text("ALTER TABLE user ADD COLUMN specific_location VARCHAR(200)"))
+    if 'reset_token' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN reset_token VARCHAR(128)"))
+    if 'reset_token_expires_at' not in existing_columns:
+        db.session.execute(text("ALTER TABLE user ADD COLUMN reset_token_expires_at DATETIME"))
 
     db.session.execute(text("UPDATE user SET status = 'approved' WHERE status IS NULL"))
     db.session.commit()
@@ -506,6 +519,60 @@ def login():
             flash('Invalid username or password', 'danger')
     
     return render_template('auth/login.html', form=form)
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        identity = form.identity.data.strip()
+        user = User.query.filter(
+            or_(User.username == identity, User.email == identity)
+        ).first()
+
+        if user:
+            token = secrets.token_urlsafe(32)
+            user.reset_token = token
+            user.reset_token_expires_at = get_malawi_time() + timedelta(hours=1)
+            db.session.commit()
+
+            reset_url = url_for('reset_password', token=token, _external=True)
+            email_sent = send_password_reset_email(app, user.email, reset_url)
+            log_system_event('info', 'auth', f'Password reset requested for {user.username}', user.id)
+
+            if app.config.get('MAIL_SUPPRESS_SEND') or not email_sent:
+                flash(f'Password reset link: {reset_url}', 'info')
+
+        flash('If an account matched your details, a password reset link has been prepared.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('auth/forgot_password.html', form=form)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    user = User.query.filter_by(reset_token=token).first()
+    expires_at = ensure_malawi_datetime(user.reset_token_expires_at) if user else None
+    if user is None or not expires_at or expires_at < get_malawi_time():
+        flash('This password reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.new_password.data)
+        user.reset_token = None
+        user.reset_token_expires_at = None
+        db.session.commit()
+
+        log_system_event('info', 'auth', f'Password reset completed for {user.username}', user.id)
+        flash('Your password has been reset successfully. You can now sign in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('auth/reset_password.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
