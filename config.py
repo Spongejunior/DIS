@@ -11,7 +11,7 @@ class Config:
     
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-    UPLOAD_FOLDER = 'uploads'
+    UPLOAD_FOLDER = '/tmp/uploads'
     
     # Email settings (for production)
     MAIL_SERVER = 'smtp.gmail.com'
