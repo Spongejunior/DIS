@@ -37,6 +37,8 @@ class User(UserMixin, db.Model):
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected
     approved_at = db.Column(db.DateTime)
     rejected_at = db.Column(db.DateTime)
+    reset_token = db.Column(db.String(128))
+    reset_token_expires_at = db.Column(db.DateTime)
     
     # Relationships
     symptoms = db.relationship('SymptomReport', backref='farmer', foreign_keys='SymptomReport.farmer_id')
@@ -87,6 +89,7 @@ class SymptomReport(db.Model):
     animal_id = db.Column(db.String(50))
     animal_name = db.Column(db.String(100))
     animal_type = db.Column(db.String(10))  # 'cattle' or 'goat'
+    animal_sex = db.Column(db.String(10))  # 'male' or 'female'
     animal_age = db.Column(db.Integer)  # in months
     animal_weight = db.Column(db.Float)  # in kg
     animal_breed = db.Column(db.String(50))  # e.g., Holstein, Saanen
@@ -351,6 +354,7 @@ class Notification(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     notification_type = db.Column(db.String(50))  # prediction, treatment, mortality, breeding, system_alert
     title = db.Column(db.String(200))
     message = db.Column(db.Text)

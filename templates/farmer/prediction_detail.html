@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction {{ prediction.prediction_id }} - ChiwetoCare{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    {% if current_user.role == 'farmer' %}
+    <a class="nav-link" href="{{ url_for('farmer_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+    <a class="nav-link" href="{{ url_for('symptom_form') }}"><i class="bi bi-clipboard-plus-fill"></i> Report Symptoms</a>
+    <a class="nav-link" href="{{ url_for('symptom_history') }}"><i class="bi bi-clock-history"></i> History</a>
+    <a class="nav-link active" href="{{ url_for('farmer_predictions') }}"><i class="bi bi-graph-up-arrow"></i> Predictions</a>
+    {% elif current_user.role == 'veterinarian' %}
+    <a class="nav-link" href="{{ url_for('vet_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+    <a class="nav-link" href="{{ url_for('predictions_review') }}"><i class="bi bi-clipboard-check"></i> Review Predictions</a>
+    <a class="nav-link" href="{{ url_for('farmer_mapping') }}"><i class="bi bi-people"></i> Farmers</a>
+    {% else %}
+    <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+    {% endif %}
+</nav>
+{% endblock %}
+
+{% block content %}
+{% set conf = (prediction.confidence * 100)|round(1) %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h3 class="fw-bold mb-0">Prediction Report</h3>
+        <p class="text-muted mb-0">{{ prediction.prediction_id }} &middot; Report {{ report.report_id }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if current_user.role == 'veterinarian' %}
+        <a href="{{ url_for('add_treatment', prediction_id=prediction.id) }}" class="btn btn-primary">
+            <i class="bi bi-capsule"></i> Add Treatment
+        </a>
+        {% endif %}
+        <a href="{{ url_for('prediction_pdf', prediction_id=prediction.id) }}" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Download PDF
+        </a>
+        <a href="javascript:history.back()" class="btn btn-light"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Result -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">AI Prediction</h5></div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-light rounded-circle p-3 me-3"><i class="bi bi-activity fs-3 text-primary"></i></div>
+                    <div>
+                        <h2 class="fw-bold mb-0">{{ prediction.disease_name }}</h2>
+                        <div class="text-muted">{{ prediction.disease_category|capitalize }} condition</div>
+                    </div>
+                </div>
+
+                <div class="mb-2 d-flex justify-content-between small fw-bold">
+                    <span>Confidence</span><span>{{ conf }}%</span>
+                </div>
+                <div class="progress mb-3" style="height: 22px;">
+                    <div class="progress-bar bg-{{ 'success' if conf >= 75 else ('info' if conf >= 50 else 'warning') }}" data-width="{{ conf }}">{{ conf }}%</div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-{{ 'danger' if prediction.severity in ['critical','severe'] else 'secondary' }} px-3 py-2">Severity: {{ prediction.severity|capitalize }}</span>
+                    <span class="badge bg-{{ 'success' if prediction.review_status == 'confirmed' else ('info' if prediction.review_status == 'modified' else 'secondary') }} px-3 py-2">Vet review: {{ prediction.review_status|capitalize }}</span>
+                    <span class="badge bg-light text-dark px-3 py-2">{{ prediction.predicted_at.strftime('%Y-%m-%d %H:%M') if prediction.predicted_at else '--' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Possible diseases chart -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Top Possible Conditions</h6></div>
+            <div class="card-body">
+                {% if possible_diseases %}
+                <canvas id="possibleChart" height="200"></canvas>
+                {% else %}
+                <p class="text-muted text-center py-4 mb-0">No probability breakdown available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Animal info -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Animal &amp; Case</h6></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-6 text-muted">Animal</dt><dd class="col-6">{{ report.animal_name }}</dd>
+                    <dt class="col-6 text-muted">Species</dt><dd class="col-6 text-capitalize">{{ report.animal_type }}</dd>
+                    <dt class="col-6 text-muted">Sex</dt><dd class="col-6 text-capitalize">{{ report.animal_sex or '--' }}</dd>
+                    <dt class="col-6 text-muted">Age (months)</dt><dd class="col-6">{{ report.animal_age if report.animal_age is not none else '--' }}</dd>
+                    <dt class="col-6 text-muted">Temperature</dt><dd class="col-6">{{ report.temperature if report.temperature is not none else '--' }}&deg;C</dd>
+                    <dt class="col-6 text-muted">Status</dt><dd class="col-6 text-capitalize">{{ report.status }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Symptoms -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Reported Symptoms</h6></div>
+            <div class="card-body">
+                {% set syms = report.get_additional_symptoms_list() %}
+                {% if syms %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for s in syms %}<span class="badge bg-secondary px-3 py-2">{{ s }}</span>{% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No symptoms recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0"><i class="bi bi-lightbulb text-warning"></i> Recommended Action</h6></div>
+            <div class="card-body">
+                <p class="mb-0">{{ prediction.recommendation_text or 'Isolate the animal and wait for veterinarian review and prescription.' }}</p>
+                {% if prediction.review_notes %}
+                <hr>
+                <p class="mb-0"><strong>Veterinarian notes:</strong> {{ prediction.review_notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small mt-3">
+    <i class="bi bi-info-circle"></i> This AI-generated prediction supports — but does not replace — professional veterinary diagnosis.
+</p>
+{% endblock %}
+
+{% block scripts %}
+{% if possible_diseases %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('possibleChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ possible_diseases|map(attribute='disease')|list|tojson }},
+            datasets: [{
+                label: 'Probability (%)',
+                data: {{ possible_diseases|map(attribute='probability')|list|tojson }}.map(p => +(p*100).toFixed(1)),
+                backgroundColor: ['#1a4a2e', '#2c7744', '#f59e0b', '#3b82f6', '#ef4444'].slice(0, {{ possible_diseases|length }})
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, max: 100 } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -134,14 +134,17 @@
                                 <tr>
                                     <td class="px-4">
                                         <div class="fw-bold">{{ report.animal_name }}</div>
-                                        <div class="small text-muted">{{ report.animal_type|capitalize }}</div>
+                                        <div class="small text-muted">{{ report.animal_type|capitalize }}{% if report.breed %} &middot; {{ report.breed }}{% endif %}</div>
                                     </td>
                                     <td>
                                         <span class="text-danger small fw-bold">{{ report.suspected_cause }}</span>
+                                        {% if report.requires_investigation %}
+                                        <span class="badge bg-warning text-dark ms-1">Investigate</span>
+                                        {% endif %}
                                     </td>
-                                    <td>{{ report.date_of_death.strftime('%d %b %Y') }}</td>
+                                    <td>{{ report.date_of_death.strftime('%Y-%m-%d') if report.date_of_death else '--' }}</td>
                                     <td class="text-end px-4">
-                                        <button class="btn btn-sm btn-light">View Report</button>
+                                        <a href="{{ url_for('mortality_reports') }}" class="btn btn-sm btn-light">View Report</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -159,6 +162,43 @@
 
     <!-- Quick Actions & Stats -->
     <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Farmer Messages</h5>
+                    <a href="{{ url_for('vet_communications') }}" class="btn btn-sm btn-light">Open Inbox</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if farmer_messages %}
+                        {% for note in farmer_messages %}
+                        {% set sender = message_senders.get(note.sender_id) %}
+                        <div class="list-group-item border-0 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="fw-semibold small">{{ note.title }}</div>
+                                    <div class="text-muted small">
+                                        From {{ (sender.full_name or sender.username) if sender else 'Assigned farmer' }}
+                                    </div>
+                                </div>
+                                <span class="badge bg-{{ 'danger' if note.priority in ['high', 'critical'] else ('warning text-dark' if note.priority == 'medium' else 'primary') }}">
+                                    {{ note.priority|capitalize }}
+                                </span>
+                            </div>
+                            <p class="text-muted small mb-0 mt-2">{{ note.message }}</p>
+                            <div class="small text-muted mt-2">{{ note.created_at.strftime('%d %b %Y %H:%M') if note.created_at else '--' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center">
+                            <p class="text-muted mb-0 small">No farmer messages yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3">
                 <h5 class="fw-bold mb-0">Quick Actions</h5>
@@ -193,9 +233,18 @@
                     <h5 class="fw-bold mb-0">Farmer Alerts</h5>
                 </div>
                 <p class="small opacity-75 mb-4">Send health alerts or advice to all your assigned farmers at once.</p>
-                <button class="btn btn-primary w-100 fw-bold py-2" data-bs-toggle="modal" data-bs-target="#newAnnouncement">
-                    Create Broadcast
-                </button>
+                <div class="small opacity-75 mb-3">Sent alerts: {{ sent_alerts_count }} | Meetings: {{ scheduled_meetings_count }}</div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary fw-bold py-2" data-bs-toggle="modal" data-bs-target="#newAnnouncement">
+                        Create Broadcast
+                    </button>
+                    <button class="btn btn-outline-light fw-bold py-2" data-bs-toggle="modal" data-bs-target="#scheduleMeetingModal">
+                        Schedule Meeting
+                    </button>
+                    <a href="{{ url_for('vet_communications') }}" class="btn btn-light fw-bold py-2">
+                        View Sent Alerts
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -205,37 +254,91 @@
 <div class="modal fade" id="newAnnouncement" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Broadcast to Farmers</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-muted">Recipients</label>
-                    <select class="form-select border-0 bg-light py-2">
-                        <option selected>All Assigned Farmers</option>
-                    </select>
+            <form method="POST" action="{{ url_for('send_farmer_alert') }}">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Broadcast to Farmers</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-muted">Alert Level</label>
-                    <div class="d-flex gap-2">
-                        <input type="radio" class="btn-check" name="level" id="level1" checked>
-                        <label class="btn btn-outline-info btn-sm flex-grow-1" for="level1">Info</label>
-                        <input type="radio" class="btn-check" name="level" id="level2">
-                        <label class="btn btn-outline-warning btn-sm flex-grow-1" for="level2">Warning</label>
-                        <input type="radio" class="btn-check" name="level" id="level3">
-                        <label class="btn btn-outline-danger btn-sm flex-grow-1" for="level3">Critical</label>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Recipients</label>
+                        <input type="text" class="form-control border-0 bg-light py-2" value="All Assigned Farmers" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Subject</label>
+                        <input type="text" name="subject" class="form-control border-0 bg-light" maxlength="200" placeholder="Example: Urgent disease prevention advice">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Alert Level</label>
+                        <div class="d-flex gap-2">
+                            <input type="radio" class="btn-check" name="priority" id="level1" value="low" checked>
+                            <label class="btn btn-outline-info btn-sm flex-grow-1" for="level1">Info</label>
+                            <input type="radio" class="btn-check" name="priority" id="level2" value="high">
+                            <label class="btn btn-outline-warning btn-sm flex-grow-1" for="level2">Warning</label>
+                            <input type="radio" class="btn-check" name="priority" id="level3" value="critical">
+                            <label class="btn btn-outline-danger btn-sm flex-grow-1" for="level3">Critical</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Message</label>
+                        <textarea name="message" class="form-control border-0 bg-light" rows="4" placeholder="Enter your message here..." required></textarea>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-muted">Message</label>
-                    <textarea class="form-control border-0 bg-light" rows="4" placeholder="Enter your message here..."></textarea>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Send Broadcast</button>
                 </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary px-4">Send Broadcast</button>
-            </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="scheduleMeetingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{{ url_for('schedule_farmer_meeting') }}">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Schedule Meeting</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Assigned Farmer</label>
+                        <select name="farmer_id" class="form-select border-0 bg-light" required>
+                            <option value="">Select farmer</option>
+                            {% for farmer in assigned_farmer_list %}
+                            <option value="{{ farmer.id }}">{{ farmer.full_name or farmer.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Meeting Title</label>
+                        <input type="text" name="title" class="form-control border-0 bg-light" maxlength="200" placeholder="Example: Farm health follow-up">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Date</label>
+                            <input type="date" name="meeting_date" class="form-control border-0 bg-light" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Time</label>
+                            <input type="time" name="meeting_time" class="form-control border-0 bg-light" required>
+                        </div>
+                    </div>
+                    <div class="mt-3 mb-3">
+                        <label class="form-label fw-bold small text-muted">Location</label>
+                        <input type="text" name="location" class="form-control border-0 bg-light" placeholder="Village, clinic, or farm address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Notes</label>
+                        <textarea name="notes" class="form-control border-0 bg-light" rows="3" placeholder="What should the farmer prepare or bring?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Schedule Meeting</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

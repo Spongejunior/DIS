@@ -51,7 +51,7 @@
                             {{ form.remember(class="form-check-input") }}
                             {{ form.remember.label(class="form-check-label small text-muted") }}
                         </div>
-                        <a href="#" class="text-primary small fw-bold text-decoration-none">Forgot Password?</a>
+                        <a href="{{ url_for('forgot_password') }}" class="text-primary small fw-bold text-decoration-none">Forgot Password?</a>
                     </div>
 
                     <div class="d-grid">

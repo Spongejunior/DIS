@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - ChiwetoCare{% endblock %}
+
+{% block sidebar %}
+<nav class="nav flex-column">
+    <a class="nav-link" href="{{ url_for('farmer_dashboard') }}">
+        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+    </a>
+    <a class="nav-link" href="{{ url_for('symptom_form') }}">
+        <i class="bi bi-clipboard-plus-fill"></i> Report Symptoms
+    </a>
+    <a class="nav-link" href="{{ url_for('symptom_history') }}">
+        <i class="bi bi-clock-history"></i> History
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_predictions') }}">
+        <i class="bi bi-graph-up-arrow"></i> Predictions
+    </a>
+    <a class="nav-link active" href="{{ url_for('farmer_notifications') }}">
+        <i class="bi bi-bell-fill"></i> Notifications
+    </a>
+    <a class="nav-link" href="{{ url_for('farmer_registration') }}">
+        <i class="bi bi-person-fill-gear"></i> Profile
+    </a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-0 text-dark">Notifications</h3>
+        <p class="text-muted mb-0">Alerts, meeting schedules, and messages from your veterinarian.</p>
+    </div>
+    <form method="POST" action="{{ url_for('mark_farmer_notifications_read') }}">
+        <button type="submit" class="btn btn-outline-primary" {% if not unread_count %}disabled{% endif %}>
+            <i class="bi bi-check2-all me-2"></i>Mark All Read
+        </button>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <a href="{{ url_for('farmer_notifications', filter='all') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 {% if active_filter == 'all' %}border border-primary{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Total Notifications</div>
+                <div class="display-6 fw-bold">{{ total_notifications }}</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('farmer_notifications', filter='unread') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 {% if active_filter == 'unread' %}border border-warning{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Unread</div>
+                <div class="display-6 fw-bold text-warning">{{ unread_count }}</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('farmer_notifications', filter='meeting') }}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 {% if active_filter == 'meeting' %}border border-primary{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small fw-bold text-uppercase mb-2">Meetings Scheduled</div>
+                <div class="display-6 fw-bold text-primary">{{ meetings_count }}</div>
+            </div>
+        </div>
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+                {% if active_filter == 'unread' %}
+                Unread Notifications
+                {% elif active_filter == 'meeting' %}
+                Meeting Notifications
+                {% else %}
+                All Notifications
+                {% endif %}
+            </h5>
+            {% if active_filter != 'all' %}
+            <a href="{{ url_for('farmer_notifications') }}" class="btn btn-sm btn-light">Show All</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% if notifications %}
+                {% for note in notifications %}
+                {% set sender = notification_senders.get(note.sender_id) %}
+                <a href="{{ url_for('farmer_notification_detail', notification_id=note.id) }}" class="list-group-item list-group-item-action border-0 px-4 py-3 text-decoration-none">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <div class="fw-semibold">{{ note.title }}</div>
+                            <div class="small text-muted mb-1">
+                                {{ note.notification_type|replace('_', ' ')|title }}
+                                {% if sender %}
+                                &middot; from {{ sender.full_name or sender.username }}
+                                {% endif %}
+                                {% if not note.is_read %}
+                                &middot; <span class="text-warning fw-semibold">Unread</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="badge bg-{{ 'danger' if note.priority in ['high', 'critical'] else ('warning text-dark' if note.priority == 'medium' else 'primary') }}">
+                            {{ note.priority|capitalize }}
+                        </span>
+                    </div>
+                    <p class="text-muted mb-1 mt-2">{{ note.message }}</p>
+                    <div class="small text-muted">{{ note.created_at.strftime('%d %b %Y %H:%M') if note.created_at else '--' }}</div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="p-5 text-center text-muted">No notifications yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
