@@ -24,10 +24,6 @@
 
 {% block content %}
 
-{% if not predictions or predictions|length == 0 %}
-<div class="alert alert-info" role="alert">
-    No predictions yet. Submit the symptom report first.
-</div>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-graph-up"></i> Disease Predictions & Recommendations</h2>
     <div>
@@ -37,228 +33,116 @@
     </div>
 </div>
 
-<!-- Active Predictions -->
+{% if not predictions or predictions|length == 0 %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle"></i> No predictions yet.
+    <a href="{{ url_for('symptom_form') }}" class="alert-link">Submit a symptom report</a> to receive an AI-powered disease prediction.
+</div>
+{% else %}
+
+{% set latest = predictions[0] %}
+<!-- Latest Prediction -->
 <div class="card mb-4">
     <div class="card-header bg-warning text-dark">
-        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Active Predictions Requiring Attention</h5>
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Latest Prediction Requiring Attention</h5>
     </div>
     <div class="card-body">
-                    <div class="alert alert-warning">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <i class="bi bi-thermometer-high" style="font-size: 2rem;"></i>
+        <div class="alert alert-warning mb-0">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <i class="bi bi-thermometer-high" style="font-size: 2rem;"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5>AI Prediction: {{ latest.disease_name }}</h5>
+                    <p>
+                        <strong>Confidence:</strong> {{ (latest.confidence * 100)|round(1) }}%
+                        <span class="ms-2">| <strong>Report ID:</strong> {{ latest.symptom_report.report_id }}</span>
+                        <span class="ms-2">| <strong>Animal:</strong> {{ latest.symptom_report.animal_name }}</span>
+                    </p>
+                    {% set others = latest.get_possible_diseases() %}
+                    {% if others and others|length > 1 %}
+                    <p class="mb-1"><strong>Other possibilities:</strong>
+                        {% for d in others[1:] %}
+                            {{ d.disease }} ({{ (d.probability * 100)|round(1) }}%){% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% endif %}
+                    <p>
+                        <strong>Recommended Action:</strong>
+                        {{ latest.recommendation_text or 'Isolate the animal and wait for veterinarian review and prescription.' }}
+                    </p>
+                    <div class="mt-2">
+                        <span class="badge bg-{{ 'success' if latest.review_status == 'confirmed' else ('info' if latest.review_status == 'modified' else 'secondary') }}">
+                            Review: {{ latest.review_status|capitalize }}
+                        </span>
+                        <span class="badge bg-dark">Severity: {{ latest.severity|capitalize }}</span>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('prediction_detail', prediction_id=latest.id) }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-eye"></i> View Full Report
+                        </a>
+                        <a href="{{ url_for('prediction_pdf', prediction_id=latest.id) }}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prediction History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Prediction History</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Animal</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                        <th>Review Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in predictions %}
+                    <tr>
+                        <td>{{ p.predicted_at.strftime('%Y-%m-%d') if p.predicted_at else '--' }}</td>
+                        <td>{{ p.symptom_report.animal_name }}</td>
+                        <td>{{ p.disease_name }}</td>
+                        <td style="min-width: 140px;">
+                            {% set conf = (p.confidence * 100)|round(1) %}
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-{{ 'success' if conf >= 75 else ('info' if conf >= 50 else 'warning') }}"
+                                     data-width="{{ conf }}">{{ conf }}%</div>
                             </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h5>AI Prediction: {{ predictions[0].disease_name if predictions and predictions|length > 0 else 'Unknown' }}</h5>
-                                <p>
-                                    <strong>Confidence:</strong>
-                                    {{ (predictions[0].confidence * 100)|round(1) if predictions and predictions|length > 0 else 0 }}% 
-                                    <span class="ms-2">| <strong>Report ID:</strong> {{ predictions[0].symptom_report.report_id if predictions and predictions|length > 0 else '--' }}</span>
-                                </p>
-                                <p>
-                                    <strong>Recommended Action:</strong>
-                                    {{ predictions[0].recommendation_text if predictions and predictions|length > 0 else 'Contain the animal and wait for veterinarian prescription.' }}
-                                </p>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentModal">
-                                        <i class="bi bi-capsule"></i> View Treatment Details
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success" disabled title="Waiting for veterinarian review">
-                                        <i class="bi bi-check-circle"></i> Mark as Addressed
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-    </div>
-</div>
-
-<!-- Recent Predictions -->
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Prediction History</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Animal</th>
-                                <th>Prediction</th>
-                                <th>Confidence</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>2024-03-15</td>
-                                <td>Bessie (Cow-001)</td>
-                                <td>Respiratory Infection</td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-success" style="width: 92%">92%</div>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-warning">Active</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#detailsModal">
-                                        <i class="bi bi-info-circle"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2024-03-12</td>
-                                <td>Clucky (Chicken-012)</td>
-                                <td>Parasitic Infection</td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-info" style="width: 76%">76%</div>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-success">Treated</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-info-circle"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2024-03-10</td>
-                                <td>Spotty (Goat-005)</td>
-                                <td>Foot Rot</td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-primary" style="width: 88%">88%</div>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-success">Resolved</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-info-circle"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2024-03-05</td>
-                                <td>Multiple (Poultry)</td>
-                                <td>Nutritional Deficiency</td>
-                                <td>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-warning" style="width: 67%">67%</div>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-info">Monitoring</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-info-circle"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <!-- Recommendations -->
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Current Recommendations</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    <div class="list-group-item">
-                        <h6>Antibiotic Treatment</h6>
-                        <small>For Respiratory Infection</small>
-                        <p class="mb-1">Administer Oxytetracycline for 5 days</p>
-                        <small class="text-muted">Prescribed by Dr. Smith</small>
-                    </div>
-                    <div class="list-group-item">
-                        <h6>Environmental Control</h6>
-                        <small>Prevent spread</small>
-                        <p class="mb-1">Improve ventilation in barn</p>
-                    </div>
-                    <div class="list-group-item">
-                        <h6>Feed Supplement</h6>
-                        <small>Boost immunity</small>
-                        <p class="mb-1">Add Vitamin C to feed for next 2 weeks</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Prediction Statistics -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Prediction Statistics</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <h6>Accuracy Rate</h6>
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar bg-success" style="width: 89%">89%</div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <h6>Average Response Time</h6>
-                    <p class="h4">4.2 hours</p>
-                </div>
-                <div>
-                    <h6>Common Predictions</h6>
-                    <ul class="list-unstyled">
-                        <li>• Respiratory Issues (35%)</li>
-                        <li>• Parasitic Infections (28%)</li>
-                        <li>• Nutritional Deficiencies (22%)</li>
-                        <li>• Other (15%)</li>
-                    </ul>
-                </div>
-            </div>
+                        </td>
+                        <td>
+                            {% if p.review_status == 'confirmed' %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% elif p.review_status == 'modified' %}
+                                <span class="badge bg-info">Modified</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Pending Review</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            <a href="{{ url_for('prediction_detail', prediction_id=p.id) }}" class="btn btn-sm btn-outline-info" title="View detail"><i class="bi bi-eye"></i></a>
+                            <a href="{{ url_for('prediction_pdf', prediction_id=p.id) }}" class="btn btn-sm btn-outline-danger" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-
-<!-- Treatment Details Modal -->
-<div class="modal fade" id="treatmentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Treatment Recommendations</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6>For Respiratory Infection (Bessie - Cow-001)</h6>
-                <div class="alert alert-info">
-                    <strong>Medication:</strong> Oxytetracycline 20mg/kg<br>
-                    <strong>Duration:</strong> 5 days<br>
-                    <strong>Frequency:</strong> Twice daily<br>
-                    <strong>Prescribed by:</strong> Dr. Smith (Veterinarian)
-                </div>
-                <h6>Additional Instructions:</h6>
-                <ul>
-                    <li>Isolate animal from herd</li>
-                    <li>Provide clean, dry bedding</li>
-                    <li>Ensure adequate water intake</li>
-                    <li>Monitor temperature twice daily</li>
-                    <li>Report any worsening symptoms immediately</li>
-                </ul>
-                <h6 class="mt-3">Follow-up Schedule:</h6>
-                <p>Veterinarian follow-up in 3 days (March 18, 2024)</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="window.print()">
-                    <i class="bi bi-printer"></i> Print Instructions
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% endif %}
 
 <script>
 function printPredictions() {

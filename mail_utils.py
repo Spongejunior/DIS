@@ -55,3 +55,15 @@ def send_rejection_email(app, email):
         email,
         'Hello,\n\nYour ChiwetoCare account request was reviewed and rejected. Please contact an administrator if you need more information.\n\nThank you.'
     )
+
+
+def send_password_reset_email(app, email, reset_url):
+    return _send_simple_email(
+        app,
+        'Reset your ChiwetoCare password',
+        email,
+        'Hello,\n\nWe received a request to reset your ChiwetoCare password.\n\n'
+        f'Open this link to set a new password:\n{reset_url}\n\n'
+        'If you did not request this change, you can safely ignore this email.\n\n'
+        'Thank you.'
+    )

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Treatment Recommendation - ChiwetoCare{% endblock %}
+
+{% block sidebar %}
+{% set active_page = 'reviews' %}
+{% include "veterinarian/_sidebar.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h3 class="fw-bold mb-0">{{ 'Edit' if existing else 'Add' }} Treatment Recommendation</h3>
+        <p class="text-muted mb-0">{{ prediction.prediction_id }} &middot; {{ report.report_id }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('prediction_detail', prediction_id=prediction.id) }}" class="btn btn-outline-info"><i class="bi bi-eye"></i> View Prediction</a>
+        <a href="{{ url_for('predictions_review') }}" class="btn btn-light"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+<!-- Case summary -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><div class="small text-muted">Animal</div><div class="fw-bold">{{ report.animal_name }} ({{ report.animal_type|capitalize }})</div></div>
+            <div class="col-md-3"><div class="small text-muted">Predicted Disease</div><div class="fw-bold">{{ prediction.disease_name }}</div></div>
+            <div class="col-md-3"><div class="small text-muted">Confidence</div><div class="fw-bold">{{ (prediction.confidence * 100)|round(1) }}%</div></div>
+            <div class="col-md-3"><div class="small text-muted">Severity</div><div class="fw-bold text-capitalize">{{ prediction.severity }}</div></div>
+            <div class="col-12">
+                <div class="small text-muted">Reported symptoms</div>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    {% for s in report.get_additional_symptoms_list() %}<span class="badge bg-secondary">{{ s }}</span>{% else %}<span class="text-muted small">None recorded</span>{% endfor %}
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="small text-muted">AI recommended action</div>
+                <div>{{ prediction.recommendation_text or '--' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Treatment form -->
+<form method="POST" action="{{ url_for('add_treatment', prediction_id=prediction.id) }}">
+    {{ form.hidden_tag() }}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3"><h5 class="fw-bold mb-0">Treatment Plan</h5></div>
+        <div class="card-body">
+            {% if form.errors %}
+            <div class="alert alert-danger small">
+                <ul class="mb-0">
+                    {% for field, errs in form.errors.items() %}{% for e in errs %}<li>{{ form[field].label.text }}: {{ e }}</li>{% endfor %}{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    {{ form.medication.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.medication(class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.medication_type.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.medication_type(class="form-select") }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.dosage.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.dosage(class="form-control", placeholder="e.g. 10 ml") }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.dosage_per_kg.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.dosage_per_kg(class="form-control") }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.route.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.route(class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.frequency.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.frequency(class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.duration.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.duration(class="form-control", placeholder="days") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.milk_withdrawal_days.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.milk_withdrawal_days(class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.meat_withdrawal_days.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.meat_withdrawal_days(class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.supportive_care.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.supportive_care(class="form-control", rows="3") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.diet_recommendations.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.diet_recommendations(class="form-control", rows="3") }}
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check mt-2">
+                        {{ form.follow_up_required(class="form-check-input") }}
+                        {{ form.follow_up_required.label(class="form-check-label") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    {{ form.follow_up_date.label(class="form-label small fw-bold text-muted") }}
+                    {{ form.follow_up_date(class="form-control") }}
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-0 d-flex justify-content-end gap-2 p-3">
+            <a href="{{ url_for('predictions_review') }}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Save &amp; Share with Farmer</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

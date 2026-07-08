@@ -34,7 +34,7 @@
                             <th>Email</th>
                             <th>Registered</th>
                             <th>Status</th>
-                            <th>Reviewed</th>
+                            <th>Last Login</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -50,12 +50,10 @@
                                 <td>{{ user.registration_date.strftime('%d %b %Y %H:%M') if user.registration_date else 'N/A' }}</td>
                                 <td>{{ user_status_badge(user.status) }}</td>
                                 <td>
-                                    {% if user.approved_at %}
-                                        <small class="text-success">Approved {{ user.approved_at.strftime('%d %b %Y %H:%M') }}</small>
-                                    {% elif user.rejected_at %}
-                                        <small class="text-danger">Rejected {{ user.rejected_at.strftime('%d %b %Y %H:%M') }}</small>
+                                    {% if user.last_login %}
+                                        <small class="text-muted">{{ user.last_login.strftime('%d %b %Y %H:%M') }}</small>
                                     {% else %}
-                                        <small class="text-muted">Awaiting review</small>
+                                        <small class="text-muted">Never</small>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">

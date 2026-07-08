@@ -321,6 +321,7 @@
                                     <li><a class="dropdown-item py-2" href="{{ url_for('farmer_registration') }}"><i class="bi bi-person me-2"></i> Profile</a></li>
                                 {% elif current_user.is_veterinarian() %}
                                     <li><a class="dropdown-item py-2" href="{{ url_for('vet_profile') }}"><i class="bi bi-person me-2"></i> Profile</a></li>
+
                                 {% elif current_user.is_organization_admin() %}
                                     <li><a class="dropdown-item py-2" href="{{ url_for('org_admin_profile') }}"><i class="bi bi-person me-2"></i> Profile</a></li>
                                 {% else %}
@@ -389,6 +390,11 @@
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
+
+            // Apply dynamic progress-bar widths from data-width (keeps templates lint-clean)
+            document.querySelectorAll('[data-width]').forEach(function(el) {
+                el.style.width = el.getAttribute('data-width') + '%';
+            });
         });
     </script>
     

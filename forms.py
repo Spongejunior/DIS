@@ -10,6 +10,15 @@ class LoginForm(FlaskForm):
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
+class ForgotPasswordForm(FlaskForm):
+    identity = StringField('Username or Email', validators=[DataRequired(), Length(min=3, max=120)])
+    submit = SubmitField('Send Reset Link')
+
+class ResetPasswordForm(FlaskForm):
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    confirm_new_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password')])
+    submit = SubmitField('Reset Password')
+
 class RegistrationForm(FlaskForm):
     full_name = StringField('Full Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -73,6 +82,10 @@ class SymptomForm(FlaskForm):
         ('cattle', 'Cattle'),
         ('goat', 'Goat')
     ], validators=[DataRequired()])
+    animal_sex = SelectField('Sex', choices=[
+        ('female', 'Female'),
+        ('male', 'Male')
+    ], validators=[DataRequired()])
     animal_age = IntegerField('Age (months)', validators=[Optional(), NumberRange(min=0)])
     animal_weight = FloatField('Weight (kg)', validators=[Optional(), NumberRange(min=0)])
     
@@ -88,9 +101,7 @@ class SymptomForm(FlaskForm):
     
     # Vital Signs
     temperature = FloatField('Body Temperature (°C)', validators=[DataRequired(), NumberRange(min=35, max=45)])
-    heart_rate = IntegerField('Heart Rate (beats/minute)', validators=[Optional(), NumberRange(min=30, max=150)])
-    respiration_rate = IntegerField('Respiration Rate (breaths/minute)', validators=[Optional(), NumberRange(min=10, max=100)])
-
+   
     
     # Digestive System
     stool_consistency = SelectField('Stool Consistency', choices=[
@@ -121,8 +132,25 @@ class SymptomForm(FlaskForm):
     
     # Other Animals
     similar_cases = IntegerField('Number of Other Animals Showing Similar Symptoms', validators=[Optional(), NumberRange(min=0)])
-    
+
+    # Extra fields required by app.py -> SymptomReport
+    appetite = SelectField('Appetite', choices=[
+        ('normal', 'Normal'),
+        ('reduced', 'Reduced'),
+        ('none', 'None'),
+        ('increased', 'Increased')
+    ], validators=[Optional()])
+
+    rumen_movement = SelectField('Rumen Movement', choices=[
+        ('normal', 'Normal'),
+        ('reduced', 'Reduced'),
+        ('absent', 'Absent')
+    ], validators=[Optional()])
+
+    animal_breed = StringField('Breed', validators=[Optional()])
+
     submit = SubmitField('Submit for Disease Prediction')
+
 
 class CattleSymptomForm(SymptomForm):
     # Cattle specific symptoms
@@ -157,7 +185,7 @@ class TreatmentForm(FlaskForm):
     weight_based = BooleanField('Calculate dosage by weight')
     animal_weight = FloatField('Animal Weight (kg)', validators=[Optional(), NumberRange(min=0)])
     dosage_per_kg = FloatField('Dosage per kg (mg/kg)', validators=[Optional(), NumberRange(min=0)])
-    total_dosage = StringField('Total Dosage', validators=[Optional()])
+    dosage = StringField('Total Dosage', validators=[Optional()])
     
     # Administration
     frequency = SelectField('Frequency', choices=[
@@ -197,9 +225,9 @@ class MortalityReportForm(FlaskForm):
         ('cattle', 'Cattle'),
         ('goat', 'Goat')
     ], validators=[DataRequired()])
-    animal_id = StringField('Animal ID/Tag Number', validators=[DataRequired()])
-    animal_name = StringField('Animal Name', validators=[Optional()])
-    breed = StringField('Breed', validators=[Optional()])
+    # animal_id = StringField('Animal ID/Tag Number', validators=[DataRequired()])
+    # animal_name = StringField('Animal Name', validators=[Optional()])
+    # breed = StringField('Breed', validators=[Optional()])
     age = IntegerField('Age (months)', validators=[Optional(), NumberRange(min=0)])
     
     # Mortality details
@@ -288,8 +316,21 @@ class ProfileForm(FlaskForm):
     
     # Farm information
     farm_name = StringField('Farm Name', validators=[Optional()])
-    location = TextAreaField('Farm Address/Location', validators=[Optional()])
-    specific_location = StringField('Specific Location/Street', validators=[Optional()])
+    # Block (Mzimba North) — drives automatic farmer<->veterinarian assignment.
+    location = SelectField('Block (Mzimba North)', choices=[
+        ('', 'Select Block'),
+        ('Bwengu', 'Bwengu'),
+        ('Emgucwini', 'Emgucwini'),
+        ('Emsizini', 'Emsizini'),
+        ('Euthini', 'Euthini'),
+        ('Malidade', 'Malidade'),
+        ('Mbalachanda', 'Mbalachanda'),
+        ('Mpherembe', 'Mpherembe'),
+        ('Mchengautuba', 'Mchengautuba'),
+        ('Njuyu', 'Njuyu'),
+        ('Zombwe', 'Zombwe'),
+    ], validators=[Optional()])
+    specific_location = StringField('Village', validators=[Optional()])
     
     # Animal information
     animal_types = SelectField('Primary Animal Types', choices=[
