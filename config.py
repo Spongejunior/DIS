@@ -32,23 +32,31 @@ class Config:
     
     @staticmethod
     def init_app(app):
-        # Ensure upload folder exists
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        pass
+        # Ensure upload folder exists only when the key is present, so the
+        # base class doesn't crash if a subclass forgets to define it.
+        upload_folder = app.config.get('UPLOAD_FOLDER')
+        if upload_folder:
+            os.makedirs(upload_folder, exist_ok=True)
 
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_ECHO = True
+    UPLOAD_FOLDER = '/tmp/uploads'
 
-class ProductionConfig(Config):
-    DEBUG = False
-    
-    # This will resolve to /app/uploads inside the container
-    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') 
-    
     def init_app(self, app):
         app.config['UPLOAD_FOLDER'] = self.UPLOAD_FOLDER
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+    # This will resolve to /app/uploads inside the container
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+
+    def init_app(self, app):
+        app.config['UPLOAD_FOLDER'] = self.UPLOAD_FOLDER
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 
 
 config = {
