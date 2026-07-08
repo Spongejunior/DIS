@@ -42,7 +42,7 @@ except Exception:  # pragma: no cover - keeps the app usable if PDF deps are abs
 # Initialize Flask app
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config.from_object(config['development'])
-config['development'].init_app(app)
+config['development']().init_app(app)
 
 # Initialize extensions
 db.init_app(app)
