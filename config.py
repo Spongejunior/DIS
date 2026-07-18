@@ -11,7 +11,7 @@ class Config:
     
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-    # UPLOAD_FOLDER =  '/tmp/uploads'
+    UPLOAD_FOLDER =  '/tmp/uploads'
     
     # Email settings (for production)
     MAIL_SERVER = 'smtp.gmail.com'
@@ -45,7 +45,7 @@ class ProductionConfig(Config):
     
     # This will resolve to /app/uploads inside the container
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') 
-    
+    SQLALCHEMY_ECHO = True
     def init_app(self, app):
         app.config['UPLOAD_FOLDER'] = self.UPLOAD_FOLDER
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
