@@ -39,6 +39,7 @@ class User(UserMixin, db.Model):
     rejected_at = db.Column(db.DateTime)
     reset_token = db.Column(db.String(128))
     reset_token_expires_at = db.Column(db.DateTime)
+    preferred_language = db.Column(db.String(10), nullable=False, default='en')  # en, chi, tum
     
     # Relationships
     symptoms = db.relationship('SymptomReport', backref='farmer', foreign_keys='SymptomReport.farmer_id')

@@ -1,0 +1,86 @@
+# Vercel ignore list - files that should NOT be deployed
+# These files are excluded from the production build
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+# Virtual environments
+venv
+env
+ENV
+.venv
+
+# IDE and editor files
+.vscode
+.idea
+.claude
+.agents
+*.swp
+*.swo
+*~
+.DS_Store
+.sublime-project
+.sublime-workspace
+
+# Version control
+.git
+.gitignore
+
+# Environment files (never deploy these!)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+log
+logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Data and uploads (managed separately)
+instance/
+uploads/
+data/
+*.db
+*.sqlite
+
+# Docker files (not needed on Vercel)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Testing
+tests/
+test_*.py
+*_test.py
+pytest.ini
+.coverage
+htmlcov
+
+# Documentation
+docs/
+README.md
+*.md
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Miscellaneous
+.vendor/
+.cache
+.pytest_cache
+.mypy_cache
+.ruff_cache
+TODO.md

@@ -9,11 +9,15 @@ if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
 
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, abort, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_babel import Babel, gettext, lazy_gettext
 from werkzeug.security import generate_password_hash
 from datetime import datetime, date, timedelta, timezone
 import json
 from functools import lru_cache, wraps
 from sqlalchemy import text, or_
+
+# Alias used across routes for translating user-facing messages.
+_ = gettext
 
 def get_malawi_time():
     """Returns the current time in Malawi (UTC+2)"""
@@ -41,8 +45,19 @@ except Exception:  # pragma: no cover - keeps the app usable if PDF deps are abs
 
 # Initialize Flask app
 app = Flask(__name__, template_folder='templates', static_folder='static')
-app.config.from_object(config['development'])
-config['development'].init_app(app)
+
+# Detect environment: Vercel, production, or development
+flask_env = os.environ.get('FLASK_ENV', 'development')
+flask_config = os.environ.get('FLASK_CONFIG', flask_env)
+
+# Use production config if running on Vercel or if explicitly set
+if flask_config in config:
+    app.config.from_object(config[flask_config])
+else:
+    app.config.from_object(config['default'])
+
+# Initialize config-specific settings
+config[flask_config].init_app(app)
 
 # Initialize extensions
 db.init_app(app)
@@ -50,7 +65,45 @@ mail.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message = lazy_gettext('Please log in to access this page.')
+
+# Initialize Flask-Babel for multilingual support
+babel = Babel(app, locale_selector=lambda: _get_locale())
+
+
+def _get_locale():
+    """Resolve the active locale for the current request.
+
+    Priority:
+      1. The logged-in user's saved ``preferred_language``.
+      2. The session value (anonymous visitors).
+      3. English (default) for everyone else.
+    """
+    lang = None
+    if current_user.is_authenticated:
+        lang = getattr(current_user, 'preferred_language', None) or None
+    if not lang:
+        lang = session.get('language')
+    if not lang:
+        lang = app.config.get('BABEL_DEFAULT_LOCALE', 'en')
+    if lang not in app.config.get('LANGUAGES', ['en']):
+        lang = app.config.get('BABEL_DEFAULT_LOCALE', 'en')
+    return lang
+
+# Make the current locale and available languages available to all templates
+@app.context_processor
+def inject_i18n():
+    return {
+        'current_language': _get_locale(),
+        'available_languages': [
+            {'code': code, 'name': name}
+            for code, name in [
+                ('en', 'English'),
+                ('chi', 'Chichewa'),
+                ('tum', 'Tumbuka'),
+            ] if code in app.config.get('LANGUAGES', ['en'])
+        ],
+    }
 
 SUPPORTED_ANIMAL_TYPES = {'cattle', 'goat'}
 
@@ -84,7 +137,7 @@ def role_required(*roles):
         @login_required
         def decorated_function(*args, **kwargs):
             if current_user.role not in roles:
-                flash('You do not have permission to access this page.', 'danger')
+                flash(_('You do not have permission to access this page.'), 'danger')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
         return decorated_function
@@ -340,6 +393,24 @@ def ensure_notification_columns():
 
     db.session.commit()
 
+
+def ensure_user_language_column():
+    """Add the ``preferred_language`` column to the user table if missing.
+
+    Kept in the same manual-ALTER-TABLE style as the other migration helpers
+    because the project does not use Alembic.
+    """
+    existing_columns = {
+        row[1] for row in db.session.execute(text("PRAGMA table_info('user')")).fetchall()
+    }
+    if 'preferred_language' not in existing_columns:
+        db.session.execute(
+            text("ALTER TABLE user ADD COLUMN preferred_language VARCHAR(10) NOT NULL DEFAULT 'en'")
+        )
+    db.session.execute(text("UPDATE user SET preferred_language = 'en' WHERE preferred_language IS NULL"))
+    db.session.commit()
+
+
 def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None, sender_id=None):
     notification = Notification(
         user_id=user_id,
@@ -476,6 +547,7 @@ with app.app_context():
     ensure_user_approval_columns()
     ensure_symptom_report_columns()
     ensure_notification_columns()
+    ensure_user_language_column()
     create_default_users()
     ensure_model_version_record()
 
@@ -483,6 +555,25 @@ with app.app_context():
 @app.route('/landing')
 def landing_page():
     return render_template('landing_files/landing.html')
+
+@app.route('/set-language', methods=['POST'])
+def set_language():
+    """Persist the selected language for the current visitor.
+
+    Logged-in users have their choice saved to their profile so it is kept
+    across devices; anonymous visitors store it in the session.
+    """
+    language = (request.form.get('language') or '').strip()
+    if language not in app.config.get('LANGUAGES', ['en']):
+        flash(_('Unsupported language selected.'), 'danger')
+        return redirect(request.referrer or url_for('landing_page'))
+
+    if current_user.is_authenticated:
+        current_user.preferred_language = language
+        db.session.commit()
+    session['language'] = language
+    flash(_('Language updated successfully.'), 'success')
+    return redirect(request.referrer or url_for('landing_page'))
 
 @app.route('/')
 def index():
@@ -502,10 +593,10 @@ def login():
         
         if user and user.check_password(form.password.data):
             if user.status == 'pending':
-                flash('Your account is awaiting admin approval.', 'warning')
+                flash(_('Your account is awaiting admin approval.'), 'warning')
                 return redirect(url_for('login'))
             if user.status == 'rejected':
-                flash('Your account was rejected.', 'danger')
+                flash(_('Your account was rejected.'), 'danger')
                 return redirect(url_for('login'))
 
             login_user(user, remember=form.remember.data)
@@ -513,10 +604,10 @@ def login():
             db.session.commit()
             
             log_system_event('info', 'auth', f'User {user.username} logged in', user.id)
-            flash('Login successful!', 'success')
+            flash(_('Login successful!'), 'success')
             return redirect(url_for('dashboard'))
         else:
-            flash('Invalid username or password', 'danger')
+            flash(_('Invalid username or password'), 'danger')
     
     return render_template('auth/login.html', form=form)
 
@@ -543,9 +634,9 @@ def forgot_password():
             log_system_event('info', 'auth', f'Password reset requested for {user.username}', user.id)
 
             if app.config.get('MAIL_SUPPRESS_SEND') or not email_sent:
-                flash(f'Password reset link: {reset_url}', 'info')
+                flash(_('Password reset link:') + f' {reset_url}', 'info')
 
-        flash('If an account matched your details, a password reset link has been prepared.', 'success')
+        flash(_('If an account matched your details, a password reset link has been prepared.'), 'success')
         return redirect(url_for('login'))
 
     return render_template('auth/forgot_password.html', form=form)
@@ -558,7 +649,7 @@ def reset_password(token):
     user = User.query.filter_by(reset_token=token).first()
     expires_at = ensure_malawi_datetime(user.reset_token_expires_at) if user else None
     if user is None or not expires_at or expires_at < get_malawi_time():
-        flash('This password reset link is invalid or has expired.', 'danger')
+        flash(_('This password reset link is invalid or has expired.'), 'danger')
         return redirect(url_for('forgot_password'))
 
     form = ResetPasswordForm()
@@ -569,7 +660,7 @@ def reset_password(token):
         db.session.commit()
 
         log_system_event('info', 'auth', f'Password reset completed for {user.username}', user.id)
-        flash('Your password has been reset successfully. You can now sign in.', 'success')
+        flash(_('Your password has been reset successfully. You can now sign in.'), 'success')
         return redirect(url_for('login'))
 
     return render_template('auth/reset_password.html', form=form)
@@ -599,7 +690,7 @@ def register():
         db.session.commit()
 
         log_system_event('info', 'auth', f'New user registered and is awaiting approval: {user.username}', user.id)
-        flash('Registration successful! Your account is awaiting admin approval.', 'info')
+        flash(_('Registration successful! Your account is awaiting admin approval.'), 'info')
         return redirect(url_for('login'))
     
     return render_template('auth/register.html', form=form)
@@ -609,7 +700,7 @@ def register():
 def logout():
     log_system_event('info', 'auth', f'User {current_user.username} logged out', current_user.id)
     logout_user()
-    flash('You have been logged out.', 'info')
+    flash(_('You have been logged out.'), 'info')
     return redirect(url_for('landing_page'))
 
 @app.route('/dashboard')
@@ -719,7 +810,7 @@ def mark_farmer_notifications_read():
         synchronize_session=False
     )
     db.session.commit()
-    flash('All notifications have been marked as read.', 'success')
+    flash(_('All notifications have been marked as read.'), 'success')
     return redirect(url_for('farmer_notifications'))
 
 
@@ -729,17 +820,17 @@ def mark_farmer_notifications_read():
 def contact_vet():
     assigned_vets = get_assigned_veterinarians(current_user)
     if not assigned_vets:
-        flash('You do not have an assigned veterinarian yet.', 'warning')
+        flash(_('You do not have an assigned veterinarian yet.'), 'warning')
         return redirect(url_for('farmer_dashboard'))
 
     subject = (request.form.get('subject') or '').strip()
     message = (request.form.get('message') or '').strip()
 
     if not message:
-        flash('Please enter a message for your veterinarian.', 'danger')
+        flash(_('Please enter a message for your veterinarian.'), 'danger')
         return redirect(url_for('farmer_dashboard'))
 
-    title = subject[:200] if subject else f'Message from {current_user.full_name or current_user.username}'
+    title = subject[:200] if subject else _('Message from %(name)s', name=current_user.full_name or current_user.username)
 
     for vet in assigned_vets:
         create_notification(
@@ -758,7 +849,7 @@ def contact_vet():
         current_user.id,
         {'recipient_count': len(assigned_vets)}
     )
-    flash('Your message has been sent to your assigned veterinarian.', 'success')
+    flash(_('Your message has been sent to your assigned veterinarian.'), 'success')
     return redirect(url_for('farmer_dashboard'))
 
 @app.route('/farmer/symptoms', methods=['GET', 'POST'])
@@ -768,7 +859,7 @@ def symptom_form():
     form = SymptomForm()
     if form.validate_on_submit():
         if form.animal_type.data not in SUPPORTED_ANIMAL_TYPES:
-            flash('Only cattle and goat cases are supported for prediction.', 'danger')
+            flash(_('Only cattle and goat cases are supported for prediction.'), 'danger')
             return render_template('farmer/symptom_form.html', form=form)
 
         report_id = generate_report_id()
@@ -811,15 +902,17 @@ def symptom_form():
                 current_user.id,
                 {'report_id': report.report_id, 'animal_type': report.animal_type, 'error': str(exc)}
             )
-            flash('Symptoms were saved, but the trained model could not generate a prediction. Please contact the administrator.', 'danger')
+            flash(_('Symptoms were saved, but the trained model could not generate a prediction. Please contact the administrator.'), 'danger')
             return redirect(url_for('symptom_history'))
         
         # Create notification for farmer
         create_notification(
             current_user.id,
             'prediction',
-            'New Prediction Generated',
-            f'Prediction for {report.animal_name}: {prediction.disease_name} with {prediction.confidence*100:.1f}% confidence',
+            _('New Prediction Generated'),
+            _('Prediction for %(animal_name)s: %(disease_name)s with %(confidence).1f%% confidence',
+              animal_name=report.animal_name, disease_name=prediction.disease_name,
+              confidence=prediction.confidence * 100),
             'medium',
             prediction.id
         )
@@ -829,14 +922,14 @@ def symptom_form():
             create_notification(
                 vet.id,
                 'review',
-                'New Prediction Requires Review',
-                f'Prediction for {report.animal_name} needs your review',
+                _('New Prediction Requires Review'),
+                _('Prediction for %(animal_name)s needs your review', animal_name=report.animal_name),
                 'high',
                 prediction.id
             )
         
         log_system_event('info', 'prediction', f'New symptom report submitted: {report.report_id}', current_user.id)
-        flash('Symptoms submitted successfully! Prediction generated.', 'success')
+        flash(_('Symptoms submitted successfully! Prediction generated.'), 'success')
         return redirect(url_for('farmer_predictions'))
     
     return render_template('farmer/symptom_form.html', form=form)
@@ -1039,7 +1132,7 @@ def farmer_registration():
             User.id != current_user.id
         ).first()
         if existing_user:
-            flash('That email address is already in use by another account.', 'danger')
+            flash(_('That email address is already in use by another account.'), 'danger')
             return render_template('farmer/registration.html', form=form)
 
         current_user.full_name = form.full_name.data
@@ -1054,7 +1147,7 @@ def farmer_registration():
         auto_assign_by_location(current_user)
         
         db.session.commit()
-        flash('Profile updated successfully!', 'success')
+        flash(_('Profile updated successfully!'), 'success')
         return redirect(url_for('farmer_registration'))
     
     return render_template('farmer/registration.html', form=form)
@@ -1248,7 +1341,7 @@ def vet_profile():
             User.id != current_user.id
         ).first()
         if existing_user:
-            flash('That email address is already in use by another account.', 'danger')
+            flash(_('That email address is already in use by another account.'), 'danger')
             return render_template(
                 'veterinarian/profile.html',
                 form=form,
@@ -1276,7 +1369,7 @@ def vet_profile():
         auto_assign_by_location(current_user)
 
         db.session.commit()
-        flash('Profile updated successfully!', 'success')
+        flash(_('Profile updated successfully!'), 'success')
         return redirect(url_for('vet_profile'))
 
     assigned_farmer_list = get_assigned_farmers(current_user)
