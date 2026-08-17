@@ -25,4 +25,4 @@ COPY . .
 
 # Railway automatically injects a PORT environment variable. 
 # We use the shell form of CMD so the $PORT variable expands correctly.
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
