@@ -23,6 +23,5 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy the rest of your application code
 COPY . .
 
-# Railway automatically injects a PORT environment variable. 
-# We use the shell form of CMD so the $PORT variable expands correctly.
+# Serve the app with gunicorn on port 10000
 CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]

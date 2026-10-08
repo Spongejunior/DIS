@@ -49,11 +49,11 @@ except Exception:  # pragma: no cover - keeps the app usable if PDF deps are abs
 # Initialize Flask app
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
-# Detect environment: Vercel, production, or development
+# Detect environment: production or development
 flask_env = os.environ.get('FLASK_ENV', 'development')
 flask_config = os.environ.get('FLASK_CONFIG', flask_env)
 
-# Use production config if running on Vercel or if explicitly set
+# Use the config named by FLASK_CONFIG, falling back to the default
 config_class = config.get(flask_config, config['default'])
 app.config.from_object(config_class)
 
