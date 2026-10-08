@@ -1,4 +1,4 @@
-"""PDF generation helpers for ChiwetoCare.
+"""PDF generation helpers for Mzimba North VetAssistant.
 
 Uses reportlab for layout and matplotlib (thread-safe Figure OO API, Agg) for
 charts embedded as PNG images. Kept separate from app.py to isolate the
@@ -123,7 +123,7 @@ def _footer(canvas, doc):
     canvas.saveState()
     canvas.setFont('Helvetica', 7)
     canvas.setFillColor(colors.grey)
-    canvas.drawString(15 * mm, 10 * mm, 'ChiwetoCare — Livestock Disease Prediction System')
+    canvas.drawString(15 * mm, 10 * mm, 'Mzimba North VetAssistant — Livestock Disease Identification & Veterinary Assistance')
     canvas.drawRightString(A4[0] - 15 * mm, 10 * mm, 'Page %d' % doc.page)
     canvas.restoreState()
 
@@ -272,7 +272,7 @@ def build_reports_pdf(meta, disease_rows, location_rows, vet_rows,
               str(r.get('assigned_farmers_count', 0))] for r in vet_rows]))
 
     story.append(Spacer(1, 10))
-    story.append(Paragraph('Generated %s by ChiwetoCare.' % generated_on, s['CSmall']))
+    story.append(Paragraph('Generated %s by Mzimba North VetAssistant.' % generated_on, s['CSmall']))
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     buf.seek(0)

@@ -42,27 +42,27 @@ def _send_simple_email(app, subject, recipient, body):
 def send_approval_email(app, email):
     return _send_simple_email(
         app,
-        'Your ChiwetoCare account has been approved',
+        'Your Mzimba North VetAssistant account has been approved',
         email,
-        'Hello,\n\nYour ChiwetoCare account has been approved. You can now sign in and access the system.\n\nThank you.'
+        'Hello,\n\nYour Mzimba North VetAssistant account has been approved. You can now sign in and access the system.\n\nThank you.'
     )
 
 
 def send_rejection_email(app, email):
     return _send_simple_email(
         app,
-        'Your ChiwetoCare account request was rejected',
+        'Your Mzimba North VetAssistant account request was rejected',
         email,
-        'Hello,\n\nYour ChiwetoCare account request was reviewed and rejected. Please contact an administrator if you need more information.\n\nThank you.'
+        'Hello,\n\nYour Mzimba North VetAssistant account request was reviewed and rejected. Please contact an administrator if you need more information.\n\nThank you.'
     )
 
 
 def send_password_reset_email(app, email, reset_url):
     return _send_simple_email(
         app,
-        'Reset your ChiwetoCare password',
+        'Reset your Mzimba North VetAssistant password',
         email,
-        'Hello,\n\nWe received a request to reset your ChiwetoCare password.\n\n'
+        'Hello,\n\nWe received a request to reset your Mzimba North VetAssistant password.\n\n'
         f'Open this link to set a new password:\n{reset_url}\n\n'
         'If you did not request this change, you can safely ignore this email.\n\n'
         'Thank you.'

@@ -71,7 +71,7 @@ In your Vercel project dashboard:
 | `DATABASE_URL` | Your Neon/RDS connection string | `postgresql://user:pass@...` |
 | `MAIL_USERNAME` | Your Gmail address | `yourname@gmail.com` |
 | `MAIL_PASSWORD` | Your 16-char app password from Phase 3 | `xxxx xxxx xxxx xxxx` |
-| `MAIL_DEFAULT_SENDER` | Sender email | `noreply@chiwetocare.local` |
+| `MAIL_DEFAULT_SENDER` | Sender email | `no-reply@vetassistant.local` |
 | `MAIL_SUPPRESS_SEND` | `false` | `false` |
 
 3. Click "Save" for each variable

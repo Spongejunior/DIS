@@ -1,4 +1,4 @@
-// Animal Health System - Main JavaScript File
+// Mzimba North VetAssistant - Main JavaScript File
 
 $(document).ready(function() {
     const loader = document.getElementById('page-loader');

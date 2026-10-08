@@ -1,4 +1,4 @@
-# TODO - ChiwetoCare alignment
+# TODO - Mzimba North VetAssistant alignment
 
 - [x] Inspect app.py routes and key templates.
 - [x] Inspect base.html for broken url_for usage.
