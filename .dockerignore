@@ -7,3 +7,5 @@ __pycache__
 .gitignore
 .dockerignore
 uploads/
+frontend/node_modules
+frontend/.next

@@ -7,7 +7,10 @@ PROJECT_VENDOR_PATH = os.path.join(os.path.dirname(__file__), '.vendor')
 if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
     sys.path.insert(0, PROJECT_VENDOR_PATH)
 
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, abort, send_file
+from flask import Flask, redirect, url_for, flash, request, jsonify, session, abort, send_file
+# render_template comes from the bridge so the same views can also answer the
+# Next.js frontend with JSON (see api_bridge.py). HTML rendering is unchanged.
+from api_bridge import render_template, register_api_bridge
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_babel import Babel, gettext, lazy_gettext
 from werkzeug.security import generate_password_hash
@@ -2197,6 +2200,9 @@ def approve_treatment(treatment_id):
     log_system_event('info', 'treatment', f'Treatment {treatment_id} approved by {current_user.username}', current_user.id)
     
     return jsonify({'success': True})
+
+# JSON bridge for the Next.js frontend: /api/v1/page/<path> runs the view for <path>
+register_api_bridge(app)
 
 # Error handlers
 @app.errorhandler(404)

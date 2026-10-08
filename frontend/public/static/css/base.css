@@ -1,0 +1,297 @@
+/* Shared layout styles: moved unchanged from the inline <style> block of templates/base.html */
+        :root {
+            --primary-color: #1a4a2e;
+            --primary-light: #2c7744;
+            --primary-gradient: linear-gradient(135deg, #1a4a2e 0%, #2c7744 100%);
+            --accent-color: #4caf50;
+            --bg-light: #f8fafc;
+            --sidebar-width: 260px;
+            --navbar-height: 64px;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        /* Navbar Styling */
+        .navbar {
+            height: var(--navbar-height);
+            background: white !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 1050;
+            padding: 0 1.5rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .navbar-brand .brand-logo {
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+        }
+
+        .navbar-brand .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.05;
+        }
+
+        .navbar-brand .brand-region {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--primary-light);
+        }
+
+        .navbar-brand .brand-name {
+            font-size: 1.2rem;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            height: calc(100vh - var(--navbar-height));
+            position: fixed;
+            top: var(--navbar-height);
+            left: 0;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            z-index: 1040;
+            transition: transform var(--transition-speed) ease;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link:hover {
+            background-color: #f1f5f9;
+            color: var(--primary-light);
+        }
+
+        .nav-link.active {
+            background-color: var(--primary-light);
+            color: white !important;
+        }
+
+        .nav-link i {
+            font-size: 1.2rem;
+        }
+
+        /* Main Content Styling */
+        .main-wrapper {
+            margin-top: var(--navbar-height);
+            transition: margin-left var(--transition-speed) ease;
+        }
+
+        @media (min-width: 992px) {
+            .main-wrapper.has-sidebar {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        .page-content {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Card Improvements */
+        .card {
+            border: none;
+            box-shadow: var(--card-shadow);
+            border-radius: 1rem;
+            overflow: hidden;
+            background: white;
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Button Styling */
+        .btn-primary {
+            background-color: var(--primary-light);
+            border-color: var(--primary-light);
+            padding: 0.6rem 1.2rem;
+            font-weight: 600;
+            border-radius: 0.6rem;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        /* Badge Styling */
+        .role-badge {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        /* User Menu */
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        .user-name {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+
+        /* Flash Messages */
+        .alert {
+            border-radius: 0.75rem;
+            border: none;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Auth Layout */
+        .auth-wrapper {
+            min-height: calc(100vh - var(--navbar-height));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-shell {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .auth-card {
+            width: 100%;
+            border-radius: 1.25rem;
+        }
+
+        .auth-card.auth-card-register {
+            max-width: 700px;
+        }
+
+
+
+
+
+        .auth-card.auth-card-login {
+    max-width: 400px;   /* medium width */
+    width: 100%;
+}
+
+.auth-wrapper.auth-wrapper-fixed {
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    width: 100%;
+    height: calc(100vh - var(--navbar-height));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 1rem;
+}
+
+.auth-card.auth-card-login-fixed {
+    min-height: 470px;   /* medium height */
+    max-height: 520px;
+    display: flex;
+    border-radius: 16px; /* slightly rounded */
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.auth-card.auth-card-login-fixed > div {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.8rem;
+}
+
+.auth-card .form-control,
+.auth-card .form-select,
+.auth-card .input-group-text,
+.auth-card .btn-light {
+    border-radius: 0.75rem;
+}
+
+.auth-tip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    padding: 0.8rem 1rem;
+}
+
+        /* Responsive */
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .auth-wrapper {
+                align-items: flex-start;
+                padding: 1rem;
+            }
+
+            .auth-wrapper.auth-wrapper-fixed {
+                align-items: center;
+                height: calc(100vh - var(--navbar-height));
+                padding: 1rem;
+            }
+
+            .auth-card.auth-card-login-fixed {
+                min-height: 520px;
+            }
+
+            .page-content {
+                padding: 1rem;
+            }
+        }
