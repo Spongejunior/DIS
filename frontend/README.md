@@ -1,8 +1,10 @@
 # Mzimba North VetAssistant: Next.js frontend
 
-The user interface of VetAssistant, migrated from Flask/Jinja templates to
-Next.js (App Router), React and TypeScript. It looks and behaves like the
-template version and uses the same Flask backend, database and login session.
+The user interface of VetAssistant, built with Next.js (App Router), React and
+TypeScript. It replaced the Flask/Jinja templates, which have been removed; it
+looks and behaves like them and uses the same Flask backend, database and
+login session. Flask no longer renders HTML, so the app is always used through
+this frontend.
 
 ## Running it
 
@@ -35,18 +37,17 @@ the two PDF downloads to Flask (see `next.config.ts`). Because everything stays
 on one origin, the Flask session cookie, CSRF tokens and `remember me` work as
 they did before.
 
-Flask was a server-rendered app with no JSON API, so one addition was made to
-the backend: `api_bridge.py`. A request to `/api/v1/page/<path>` runs the
-existing Flask view for `<path>` and returns what the view passed to its
-template as JSON:
+Flask has no separate JSON API; `api_bridge.py` exposes the existing views
+instead. A request to `/api/v1/page/<path>` runs the Flask view for `<path>`
+and returns the data that view prepares for its page as JSON:
 
 ```json
 { "template": "farmer/dashboard.html", "context": { ... }, "user": { ... }, "flashes": [["success", "Login successful!"]] }
 ```
 
 A redirect comes back as `{ "redirect": "/login" }`. Validation, permissions,
-flash messages and business rules are therefore the same code as before; the
-original HTML routes still work too.
+flash messages and business rules all stay in the Flask views. The `template`
+value is only a page name now.
 
 ## Layout
 
@@ -71,13 +72,14 @@ types/                      API and model types
 public/static/              the existing CSS and images, at their original URLs
 ```
 
-Each page is one file that mirrors one template; the template name is in a
-comment above the component. URLs are identical to the Flask routes.
+Each page is one file that replaced one template; the name of the template it
+came from is in a comment above the component. URLs are identical to the Flask
+routes.
 
 ## Styling
 
 Nothing was redesigned. `public/static/css/style.css` and `landing.css` are
 copies of the originals, and `base.css` is the inline `<style>` block from
-`templates/base.html` moved into a file. Bootstrap 5.3.3, Bootstrap Icons,
+the old `templates/base.html` moved into a file. Bootstrap 5.3.3, Bootstrap Icons,
 Font Awesome, the Google fonts and Chart.js load from the same CDN URLs as
 before.

@@ -8,8 +8,8 @@ if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
     sys.path.insert(0, PROJECT_VENDOR_PATH)
 
 from flask import Flask, redirect, url_for, flash, request, jsonify, session, abort, send_file
-# render_template comes from the bridge so the same views can also answer the
-# Next.js frontend with JSON (see api_bridge.py). HTML rendering is unchanged.
+# The pages are rendered by the Next.js app in frontend/. render_template comes
+# from the bridge and returns each view's data as JSON (see api_bridge.py).
 from api_bridge import render_template, register_api_bridge
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_babel import Babel, gettext, lazy_gettext
@@ -47,7 +47,7 @@ except Exception:  # pragma: no cover - keeps the app usable if PDF deps are abs
     PDF_AVAILABLE = False
 
 # Initialize Flask app
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, static_folder='static')
 
 # Detect environment: production or development
 flask_env = os.environ.get('FLASK_ENV', 'development')
