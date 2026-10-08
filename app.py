@@ -54,13 +54,12 @@ flask_env = os.environ.get('FLASK_ENV', 'development')
 flask_config = os.environ.get('FLASK_CONFIG', flask_env)
 
 # Use production config if running on Vercel or if explicitly set
-if flask_config in config:
-    app.config.from_object(config[flask_config])
-else:
-    app.config.from_object(config['default'])
+config_class = config.get(flask_config, config['default'])
+app.config.from_object(config_class)
 
-# Initialize config-specific settings
-config[flask_config].init_app(app)
+# Initialize config-specific settings (on an instance: some configs define
+# init_app as an instance method)
+config_class().init_app(app)
 
 # Initialize extensions
 db.init_app(app)
