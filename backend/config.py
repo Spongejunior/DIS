@@ -1,12 +1,29 @@
 import os
 from datetime import timedelta
 
+from dotenv import load_dotenv
+
+# Settings such as DATABASE_URL can live in backend/.env (not committed to git).
+# Real environment variables win over the file.
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+
+
+def _database_url():
+    url = os.environ.get('DATABASE_URL') or 'sqlite:///database.db'
+    # Some hosts (Railway, Heroku) still hand out the old postgres:// scheme,
+    # which SQLAlchemy no longer accepts.
+    if url.startswith('postgres://'):
+        url = 'postgresql://' + url[len('postgres://'):]
+    return url
+
+
 class Config:
     # Security - must be overridden in production
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    
-    # Database - supports both local SQLite and PostgreSQL
-    DATABASE_URL = os.environ.get('DATABASE_URL') or 'sqlite:///database.db'
+
+    # Database: PostgreSQL when DATABASE_URL is set (see backend/.env),
+    # otherwise the local SQLite file instance/database.db
+    DATABASE_URL = _database_url()
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     # Handle SQLite-specific requirements for local development
     if DATABASE_URL and 'sqlite' in DATABASE_URL:
@@ -14,7 +31,9 @@ class Config:
             'connect_args': {'check_same_thread': False}
         }
     else:
-        SQLALCHEMY_ENGINE_OPTIONS = {}
+        # Re-check pooled connections so a restarted PostgreSQL server does
+        # not cause errors on the next request.
+        SQLALCHEMY_ENGINE_OPTIONS = {'pool_pre_ping': True}
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

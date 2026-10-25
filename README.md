@@ -16,20 +16,59 @@ backend/                Flask app (JSON only) + database + ML model
   app.py                routes, prediction pipeline, startup migrations
   clinical_guidance.py  temperature check, temperature adjustment, care plans and sources
   api_bridge.py         serves every Flask view as JSON at /api/v1/page/<path>
+  config.py             settings; reads backend/.env (DATABASE_URL, ...)
+  migrate_sqlite_to_postgres.py  one-time copy of the SQLite data into PostgreSQL
   models.py             SQLAlchemy models
   forms.py              WTForms forms (validation)
   locations.py          Mzimba North EPAs and sections
   pdf_utils.py          prediction and report PDFs
   model/                livestock_disease_model.pkl (stacking ensemble) + feature_encoding.json
   data/                 training data (raw/cattle_goat.xlsx, encoded/encoded_data.csv)
-  instance/database.db  SQLite database
+  instance/database.db  old SQLite database (used only when DATABASE_URL is not set)
   Dockerfile            backend container (gunicorn, port 10000)
 frontend/               Next.js user interface (see frontend/README.md)
 ```
 
+## Database
+
+The app stores its data in the PostgreSQL database **`mzimbanorth`**. The
+connection is set in `backend/.env`, which is not committed to git because it
+holds the password:
+
+```bash
+# backend/.env
+DATABASE_URL=postgresql://postgres:<password>@127.0.0.1:5432/mzimbanorth
+```
+
+Special characters in the password must be URL-encoded (`$` → `%24`,
+`@` → `%40`). If `DATABASE_URL` is not set, the app falls back to the SQLite
+file `backend/instance/database.db`. Tables and new columns are created
+automatically when Flask starts.
+
+**Setting up on another computer:** create an empty database
+(`CREATE DATABASE mzimbanorth;` in psql or pgAdmin), create `backend/.env` as
+above, and start Flask. To bring over existing data from a SQLite file, run
+this once from `backend/` before starting Flask:
+
+```bash
+python migrate_sqlite_to_postgres.py            # into DATABASE_URL from .env
+python migrate_sqlite_to_postgres.py --replace  # empty the PostgreSQL tables first
+```
+
+The script copies every table in one transaction (all or nothing), checks the
+data for anything PostgreSQL would reject before writing, moves the id
+counters past the copied ids, and compares row counts. The SQLite file is
+only read. It refuses to write into tables that already have data unless
+`--replace` is given.
+
+The data was migrated from SQLite on 2026-10-25. A backup of the SQLite file
+from that moment is in `backend/instance/` (`database.sqlite-backup-*.db`, not
+committed).
+
 ## Running it
 
-Two terminals:
+PostgreSQL must be running (on Windows it is the `postgresql-x64-18` service).
+Then use two terminals:
 
 ```bash
 # 1. Backend (port 80)
@@ -55,8 +94,8 @@ If port 80 is taken, change `port=80` at the bottom of `backend/app.py` and put
 `BACKEND_URL=http://127.0.0.1:10000` for the frontend.
 
 **Demo accounts** (created on first start, password `pass123`): `sysadmin`,
-`orgadmin`, `vet1`, `farmer1`. Change these passwords before real use: the
-database file is committed to the repository.
+`orgadmin`, `vet1`, `farmer1`. Change these passwords before real use. (The
+old SQLite file, which also holds these accounts, is still in the repository.)
 
 ## How a prediction is made
 
@@ -151,6 +190,10 @@ veterinarian. Have a veterinarian review the wording in
 only; it is not yet translated into Chichewa or Tumbuka.
 
 ## Troubleshooting
+
+- **Flask fails to start with "connection refused" or "password
+  authentication failed":** PostgreSQL is not running, or the user/password in
+  `backend/.env` is wrong. The username is `postgres`.
 
 - **"500 – An unexpected error occurred" in the browser:** the frontend shows
   this whenever Flask does not answer properly. Check that Flask is running,

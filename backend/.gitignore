@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+# Local settings and passwords (see .env.example)
+.env
+.env.local
+# Backups made before migrating to PostgreSQL
+instance/*-backup-*.db

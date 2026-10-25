@@ -17,7 +17,7 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, date, timedelta, timezone
 import json
 from functools import lru_cache, wraps
-from sqlalchemy import text, or_
+from sqlalchemy import inspect, text, or_
 
 # Alias used across routes for translating user-facing messages.
 _ = gettext
@@ -401,75 +401,61 @@ def log_system_event(level, component, message, user_id=None, details=None):
     db.session.commit()
 
 
+# The project does not use Alembic: columns added after a table was first
+# created are added here on startup. Works on SQLite and PostgreSQL ("user" is
+# a reserved word in PostgreSQL, so table names are quoted).
+def _quoted(table_name):
+    return db.engine.dialect.identifier_preparer.quote(table_name)
+
+
+def add_missing_columns(table_name, columns):
+    """Add each (name, SQLAlchemy type, extra SQL) column the table lacks."""
+    existing_columns = {column['name'] for column in inspect(db.engine).get_columns(table_name)}
+    for name, column_type, extra in columns:
+        if name not in existing_columns:
+            sql_type = column_type.compile(dialect=db.engine.dialect)
+            db.session.execute(text(f'ALTER TABLE {_quoted(table_name)} ADD COLUMN {name} {sql_type} {extra}'.strip()))
+    db.session.commit()
+
+
+def date_bucket(column, weekly=False):
+    """SQL expression turning a datetime into a day ('2026-10-25') or week
+    ('2026-W43') label, for grouping. SQLite and PostgreSQL format dates differently."""
+    if db.engine.dialect.name == 'postgresql':
+        return db.func.to_char(column, 'IYYY-"W"IW' if weekly else 'YYYY-MM-DD')
+    return db.func.strftime('%Y-W%W' if weekly else '%Y-%m-%d', column)
+
+
 def ensure_user_approval_columns():
-    existing_columns = {
-        row[1] for row in db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-    }
-
-    if 'status' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN status VARCHAR(20) DEFAULT 'pending'"))
-    if 'approved_at' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN approved_at DATETIME"))
-    if 'rejected_at' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN rejected_at DATETIME"))
-    if 'production_focus' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN production_focus VARCHAR(50)"))
-    if 'specific_location' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN specific_location VARCHAR(200)"))
-    if 'reset_token' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN reset_token VARCHAR(128)"))
-    if 'reset_token_expires_at' not in existing_columns:
-        db.session.execute(text("ALTER TABLE user ADD COLUMN reset_token_expires_at DATETIME"))
-
-    db.session.execute(text("UPDATE user SET status = 'approved' WHERE status IS NULL"))
+    add_missing_columns('user', [
+        ('status', db.String(20), "DEFAULT 'pending'"),
+        ('approved_at', db.DateTime(), ''),
+        ('rejected_at', db.DateTime(), ''),
+        ('production_focus', db.String(50), ''),
+        ('specific_location', db.String(200), ''),
+        ('reset_token', db.String(128), ''),
+        ('reset_token_expires_at', db.DateTime(), ''),
+    ])
+    db.session.execute(text(f"UPDATE {_quoted('user')} SET status = 'approved' WHERE status IS NULL"))
     db.session.commit()
 
 
 def ensure_symptom_report_columns():
-    existing_columns = {
-        row[1] for row in db.session.execute(text("PRAGMA table_info('symptom_report')")).fetchall()
-    }
+    add_missing_columns('symptom_report', [('animal_sex', db.String(10), '')])
 
-    if 'animal_sex' not in existing_columns:
-        db.session.execute(text("ALTER TABLE symptom_report ADD COLUMN animal_sex VARCHAR(10)"))
-
-    db.session.commit()
 
 def ensure_prediction_columns():
-    existing_columns = {
-        row[1] for row in db.session.execute(text("PRAGMA table_info('prediction')")).fetchall()
-    }
+    add_missing_columns('prediction', [('care_plan', db.Text(), '')])
 
-    if 'care_plan' not in existing_columns:
-        db.session.execute(text("ALTER TABLE prediction ADD COLUMN care_plan TEXT"))
-
-    db.session.commit()
 
 def ensure_notification_columns():
-    existing_columns = {
-        row[1] for row in db.session.execute(text("PRAGMA table_info('notification')")).fetchall()
-    }
-
-    if 'sender_id' not in existing_columns:
-        db.session.execute(text("ALTER TABLE notification ADD COLUMN sender_id INTEGER"))
-
-    db.session.commit()
+    add_missing_columns('notification', [('sender_id', db.Integer(), '')])
 
 
 def ensure_user_language_column():
-    """Add the ``preferred_language`` column to the user table if missing.
-
-    Kept in the same manual-ALTER-TABLE style as the other migration helpers
-    because the project does not use Alembic.
-    """
-    existing_columns = {
-        row[1] for row in db.session.execute(text("PRAGMA table_info('user')")).fetchall()
-    }
-    if 'preferred_language' not in existing_columns:
-        db.session.execute(
-            text("ALTER TABLE user ADD COLUMN preferred_language VARCHAR(10) NOT NULL DEFAULT 'en'")
-        )
-    db.session.execute(text("UPDATE user SET preferred_language = 'en' WHERE preferred_language IS NULL"))
+    """Add the ``preferred_language`` column to the user table if missing."""
+    add_missing_columns('user', [('preferred_language', db.String(10), "NOT NULL DEFAULT 'en'")])
+    db.session.execute(text(f"UPDATE {_quoted('user')} SET preferred_language = 'en' WHERE preferred_language IS NULL"))
     db.session.commit()
 
 
@@ -1922,12 +1908,10 @@ def compute_report_analytics(location='all', animal_type='all', days=30):
     ]
 
     # Trend over time (daily buckets for short ranges, weekly otherwise)
-    bucket_fmt = '%Y-%m-%d' if days <= 14 else '%Y-W%W'
+    bucket = date_bucket(Prediction.predicted_at, weekly=days > 14)
     trend = _filtered(
-        db.session.query(db.func.strftime(bucket_fmt, Prediction.predicted_at), db.func.count(Prediction.id))
-    ).group_by(db.func.strftime(bucket_fmt, Prediction.predicted_at)).order_by(
-        db.func.strftime(bucket_fmt, Prediction.predicted_at).asc()
-    ).all()
+        db.session.query(bucket, db.func.count(Prediction.id))
+    ).group_by(bucket).order_by(bucket.asc()).all()
     trend_labels = [t[0] for t in trend if t[0]]
     trend_values = [t[1] for t in trend if t[0]]
 
