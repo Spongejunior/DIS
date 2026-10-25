@@ -3,6 +3,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextA
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, NumberRange
 from flask_babel import lazy_gettext as _
 from models import User
+from locations import ALL_SECTIONS, EPA_NAMES, section_belongs_to_epa
 import json
 
 class LoginForm(FlaskForm):
@@ -32,21 +33,16 @@ class RegistrationForm(FlaskForm):
         ('farmer', _('Farmer')),
         ('veterinarian', _('Veterinarian'))
     ], validators=[DataRequired(message=_('Please select a role.'))])
-    location = SelectField(_('Mzimba North'), choices=[
-        ('', _('Select Blocks in Mzimba North')),
-        ('Bwengu', 'Bwengu'),
-        ('Emgucwini', 'Emgucwini'),
-        ('Emsizini', 'Emsizini'),
-        ('Euthini', 'Euthini'),
-        ('Malidade', 'Malidade'),
-        ('Mbalachanda', 'Mbalachanda'),
-        ('Mpherembe', 'Mpherembe'),
-        ('Mchengautuba', 'Mchengautuba'),
-        ('Njuyu', 'Njuyu'),
-        ('Zombwe', 'Zombwe'),
-        
-    ], validators=[DataRequired(message=_('Please select your block.'))])
-    specific_location = StringField(_('Village'), validators=[Optional()])
+    # EPA (Extension Planning Area): drives farmer<->veterinarian assignment.
+    location = SelectField(_('EPA (Mzimba North)'), choices=[
+        ('', _('Select EPA in Mzimba North')),
+    ] + [(epa, epa) for epa in EPA_NAMES],
+        validators=[DataRequired(message=_('Please select your EPA.'))])
+    # Section within the chosen EPA.
+    specific_location = SelectField(_('Section'), choices=[
+        ('', _('Select Section')),
+    ] + [(section, section) for section in ALL_SECTIONS],
+        validators=[Optional()])
     
     # Farm specific for farmers
     farm_name = StringField(_('Farm Name'), validators=[Optional()])
@@ -75,6 +71,10 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError(_('Email already registered.'))
+
+    def validate_specific_location(self, specific_location):
+        if specific_location.data and not section_belongs_to_epa(specific_location.data, self.location.data):
+            raise ValidationError(_('Please select a section in your EPA.'))
 
 class SymptomForm(FlaskForm):
     # Animal Information
@@ -317,20 +317,10 @@ class ProfileForm(FlaskForm):
     
     # Farm information
     farm_name = StringField(_('Farm Name'), validators=[Optional()])
-    # Block (Mzimba North) — drives automatic farmer<->veterinarian assignment.
-    location = SelectField(_('Block (Mzimba North)'), choices=[
-        ('', _('Select Block')),
-        ('Bwengu', 'Bwengu'),
-        ('Emgucwini', 'Emgucwini'),
-        ('Emsizini', 'Emsizini'),
-        ('Euthini', 'Euthini'),
-        ('Malidade', 'Malidade'),
-        ('Mbalachanda', 'Mbalachanda'),
-        ('Mpherembe', 'Mpherembe'),
-        ('Mchengautuba', 'Mchengautuba'),
-        ('Njuyu', 'Njuyu'),
-        ('Zombwe', 'Zombwe'),
-    ], validators=[Optional()])
+    # EPA (Mzimba North) — drives automatic farmer<->veterinarian assignment.
+    location = SelectField(_('EPA (Mzimba North)'), choices=[
+        ('', _('Select EPA')),
+    ] + [(epa, epa) for epa in EPA_NAMES], validators=[Optional()])
     specific_location = StringField(_('Village'), validators=[Optional()])
     
     # Animal information

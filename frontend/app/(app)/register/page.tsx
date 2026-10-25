@@ -30,10 +30,26 @@ function TextColumn({ field, hint, column = 'col-md-6', autoComplete = 'off', er
   );
 }
 
-function RegisterForm({ form }: { form: FormData_ }) {
+/** Sections of each EPA, keyed by EPA name (locations.py on the backend). */
+type EpaSections = Record<string, string[]>;
+
+interface RegisterContext {
+  form: FormData_;
+  epa_sections: EpaSections;
+}
+
+function selectedValue(field: FormFieldData): string {
+  return field.choices?.find((choice) => choice[2])?.[0] ?? '';
+}
+
+function RegisterForm({ form, epaSections }: { form: FormData_; epaSections: EpaSections }) {
   const f = form.fields;
   // The farm fields are only shown while "Farmer" is the selected role.
-  const [role, setRole] = useState(f.role.choices?.find((choice) => choice[2])?.[0] ?? '');
+  const [role, setRole] = useState(selectedValue(f.role));
+  // The Section list only offers the sections of the chosen EPA.
+  const [epa, setEpa] = useState(selectedValue(f.location));
+  const [section, setSection] = useState(selectedValue(f.specific_location));
+  const sections = epaSections[epa] ?? [];
 
   return (
     <FlaskForm action={routes.register} noValidate autoComplete="off">
@@ -67,12 +83,41 @@ function RegisterForm({ form }: { form: FormData_ }) {
         </div>
         <div className="col-md-6">
           <Label field={f.location} className={LABEL} />
-          <Field field={f.location} className={SELECT} autoComplete="off" />
-          <div className="form-text">Pick the block your are in.</div>
+          <select
+            id={f.location.id}
+            name={f.location.name}
+            className={SELECT}
+            autoComplete="off"
+            required={Boolean(f.location.attrs.required)}
+            value={epa}
+            onChange={(event) => {
+              setEpa(event.target.value);
+              setSection('');
+            }}
+          >
+            {f.location.choices?.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <div className="form-text">Pick the EPA you are in.</div>
           <FieldErrors field={f.location} />
         </div>
 
-        <TextColumn field={f.specific_location} column="col-12" hint="Add a village, street, landmark, block, or trading centre." />
+        <div className="col-12">
+          <Label field={f.specific_location} className={LABEL} />
+          <select
+            id={f.specific_location.id}
+            name={f.specific_location.name}
+            className={SELECT}
+            autoComplete="off"
+            value={section}
+            onChange={(event) => setSection(event.target.value)}
+            disabled={!epa}
+          >
+            <option value="">{epa ? 'Select Section' : 'Select an EPA first'}</option>
+            {sections.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+          <div className="form-text">Pick the section of your EPA.</div>
+          <FieldErrors field={f.specific_location} />
+        </div>
 
         <div id="farmer-fields" style={{ display: role === 'farmer' ? 'flex' : 'none' }} className="row g-3 mt-1">
           <TextColumn field={f.farm_name} hint="Only for farmer accounts." errors={false} />
@@ -99,14 +144,14 @@ function RegisterForm({ form }: { form: FormData_ }) {
 // templates/auth/register.html
 export default function RegisterPage() {
   return (
-    <FlaskPage<{ form: FormData_ }> title="Register - Mzimba North VetAssistant">
-      {({ form }) => (
+    <FlaskPage<RegisterContext> title="Register - Mzimba North VetAssistant">
+      {({ form, epa_sections }) => (
         <AuthCard variant="register" heading="Create your account" intro="New accounts require admin approval before full access.">
           <div className="auth-tip small text-muted mb-4">
             Use your real name, active phone number and location.
           </div>
 
-          <RegisterForm form={form} />
+          <RegisterForm form={form} epaSections={epa_sections} />
 
           <div className="mt-4 pt-3 border-top text-center">
             <p className="text-muted small mb-0">Already have an account? <Link href={routes.login} className="text-primary fw-bold text-decoration-none">Sign In</Link></p>

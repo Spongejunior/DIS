@@ -11,10 +11,13 @@ this frontend.
 Two processes are needed: the Flask backend and this frontend.
 
 ```bash
-# 1. Backend, from the project root (serves on port 80)
+# 1. Backend, from the backend/ folder (serves on port 80)
+cd backend
+pip install -r requirements.txt
 python app.py
 
-# 2. Frontend, from this folder
+# 2. Frontend, in a second terminal from the frontend/ folder
+cd frontend
 npm install
 npm run dev          # http://localhost:3000
 ```
@@ -37,7 +40,7 @@ the two PDF downloads to Flask (see `next.config.ts`). Because everything stays
 on one origin, the Flask session cookie, CSRF tokens and `remember me` work as
 they did before.
 
-Flask has no separate JSON API; `api_bridge.py` exposes the existing views
+Flask has no separate JSON API; `backend/api_bridge.py` exposes the existing views
 instead. A request to `/api/v1/page/<path>` runs the Flask view for `<path>`
 and returns the data that view prepares for its page as JSON:
 

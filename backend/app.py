@@ -37,6 +37,7 @@ def ensure_malawi_datetime(value):
 from config import config
 from models import db, User, SymptomReport, Prediction, Treatment, MortalityReport, SystemLog, PerformanceMetric, ModelVersion, Report, Notification, Configuration
 from forms import LoginForm, ForgotPasswordForm, ResetPasswordForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
+from locations import EPA_NAMES, EPA_SECTIONS, RENAMED_EPAS
 from mail_utils import mail, send_approval_email, send_rejection_email, send_password_reset_email
 
 try:
@@ -109,20 +110,9 @@ def inject_i18n():
 
 SUPPORTED_ANIMAL_TYPES = {'cattle', 'goat'}
 
-# Mzimba North blocks used for farmer/vet registration and location-based analytics.
-REGISTRATION_LOCATION_CHOICES = [
-    ('', 'Select Blocks in Mzimba North'),
-    ('Bwengu', 'Bwengu'),
-    ('Emgucwini', 'Emgucwini'),
-    ('Emsizini', 'Emsizini'),
-    ('Euthini', 'Euthini'),
-    ('Malidade', 'Malidade'),
-    ('Mbalachanda', 'Mbalachanda'),
-    ('Mpherembe', 'Mpherembe'),
-    ('Mchengautuba', 'Mchengautuba'),
-    ('Njuyu', 'Njuyu'),
-    ('Zombwe', 'Zombwe'),
-]
+# Mzimba North EPAs used for farmer/vet registration and location-based analytics
+# (the list itself lives in locations.py).
+REGISTRATION_LOCATION_CHOICES = [('', 'Select EPA in Mzimba North')] + [(epa, epa) for epa in EPA_NAMES]
 MODEL_DIRECTORY = Path(__file__).resolve().parent / 'model'
 MODEL_PATH = MODEL_DIRECTORY / 'livestock_disease_model.pkl'
 FEATURE_ENCODING_PATH = MODEL_DIRECTORY / 'feature_encoding.json'
@@ -413,6 +403,39 @@ def ensure_user_language_column():
     db.session.commit()
 
 
+def ensure_epa_locations():
+    """Bring stored user locations in line with the EPA/section list.
+
+    * EPAs that were renamed are updated, so farmers and veterinarians in that
+      EPA keep matching each other.
+    * A section typed by hand in different letter case (e.g. 'luzi') is stored
+      in its listed form ('Luzi').
+    * Approved users are then re-checked against the assignment rule so anyone
+      whose EPA now matches gets linked.
+    """
+    changed = False
+    for old_name, new_name in RENAMED_EPAS.items():
+        for user in User.query.filter_by(location=old_name).all():
+            user.location = new_name
+            changed = True
+
+    for user in User.query.filter(User.location.in_(EPA_NAMES), User.specific_location.isnot(None)).all():
+        typed = (user.specific_location or '').strip()
+        if not typed:
+            continue
+        listed = {section.lower(): section for section in EPA_SECTIONS[user.location]}
+        canonical = listed.get(typed.lower())
+        if canonical and canonical != user.specific_location:
+            user.specific_location = canonical
+            changed = True
+
+    if changed:
+        db.session.commit()
+        for user in User.query.filter(User.role.in_(['farmer', 'veterinarian']), User.status == 'approved').all():
+            auto_assign_by_location(user)
+        db.session.commit()
+
+
 def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None, sender_id=None):
     notification = Notification(
         user_id=user_id,
@@ -550,6 +573,7 @@ with app.app_context():
     ensure_symptom_report_columns()
     ensure_notification_columns()
     ensure_user_language_column()
+    ensure_epa_locations()
     create_default_users()
     ensure_model_version_record()
 
@@ -695,7 +719,7 @@ def register():
         flash(_('Registration successful! Your account is awaiting admin approval.'), 'info')
         return redirect(url_for('login'))
     
-    return render_template('auth/register.html', form=form)
+    return render_template('auth/register.html', form=form, epa_sections=EPA_SECTIONS)
 
 @app.route('/logout')
 @login_required
