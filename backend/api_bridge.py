@@ -1,23 +1,21 @@
-"""JSON bridge between the existing Flask views and the Next.js frontend.
+"""JSON bridge between the Flask views and the Next.js frontend.
 
-The views in ``app.py`` keep doing all the work (queries, validation, role
-checks, flashes, redirects). This module only changes how their result is
-delivered when a request arrives through ``/api/v1/page/<path>``:
+The views in ``app.py`` do all the work (queries, validation, role checks,
+flashes, redirects). The HTML is rendered by the Next.js app in ``frontend/``,
+so this module delivers each view's result as JSON:
 
-* ``render_template(...)`` returns the template name and its context as JSON
-  instead of HTML, so the Next.js page can render the same data.
-* a redirect is returned as ``{"redirect": "/path"}`` so the browser can follow
-  it on the Next.js side.
-
-Requests to the original URLs are untouched and still render the Jinja
-templates.
+* ``render_template(name, **context)`` returns the page name and its context
+  as JSON. The name (e.g. ``farmer/dashboard.html``) identifies the page; the
+  Next.js page for that URL renders the data.
+* a request to ``/api/v1/page/<path>`` runs the view for ``<path>`` and turns a
+  redirect into ``{"redirect": "/path"}`` so the browser can follow it on the
+  Next.js side.
 """
 import json
 from datetime import date, datetime
 from urllib.parse import urlsplit
 
-from flask import current_app, g, get_flashed_messages, request
-from flask import render_template as _flask_render_template
+from flask import current_app, get_flashed_messages, request
 from flask.globals import request_ctx
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -192,10 +190,7 @@ def _json_response(payload, status=200):
 
 
 def render_template(template_name, **context):
-    """Drop-in for ``flask.render_template`` used by the views in ``app.py``."""
-    if not g.get('api_bridge'):
-        return _flask_render_template(template_name, **context)
-
+    """Used by the views in ``app.py`` in place of ``flask.render_template``."""
     unused = UNUSED_CONTEXT.get(template_name, ())
     data = {
         key: _serialize(value, full_users=key in FULL_USER_KEYS)
@@ -245,7 +240,6 @@ def _apply_forwarded_host():
 
 def register_api_bridge(app):
     def api_page(subpath=''):
-        g.api_bridge = True
         _apply_forwarded_host()
 
         try:

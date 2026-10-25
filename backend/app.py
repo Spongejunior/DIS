@@ -8,8 +8,8 @@ if os.path.isdir(PROJECT_VENDOR_PATH) and PROJECT_VENDOR_PATH not in sys.path:
     sys.path.insert(0, PROJECT_VENDOR_PATH)
 
 from flask import Flask, redirect, url_for, flash, request, jsonify, session, abort, send_file
-# render_template comes from the bridge so the same views can also answer the
-# Next.js frontend with JSON (see api_bridge.py). HTML rendering is unchanged.
+# The pages are rendered by the Next.js app in frontend/. render_template comes
+# from the bridge and returns each view's data as JSON (see api_bridge.py).
 from api_bridge import render_template, register_api_bridge
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_babel import Babel, gettext, lazy_gettext
@@ -37,6 +37,7 @@ def ensure_malawi_datetime(value):
 from config import config
 from models import db, User, SymptomReport, Prediction, Treatment, MortalityReport, SystemLog, PerformanceMetric, ModelVersion, Report, Notification, Configuration
 from forms import LoginForm, ForgotPasswordForm, ResetPasswordForm, RegistrationForm, SymptomForm, TreatmentForm, MortalityReportForm, ProfileForm, ChangePasswordForm, ConfigurationForm, ReportGenerationForm
+from locations import EPA_NAMES, EPA_SECTIONS, RENAMED_EPAS
 from mail_utils import mail, send_approval_email, send_rejection_email, send_password_reset_email
 
 try:
@@ -47,13 +48,13 @@ except Exception:  # pragma: no cover - keeps the app usable if PDF deps are abs
     PDF_AVAILABLE = False
 
 # Initialize Flask app
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, static_folder='static')
 
-# Detect environment: Vercel, production, or development
+# Detect environment: production or development
 flask_env = os.environ.get('FLASK_ENV', 'development')
 flask_config = os.environ.get('FLASK_CONFIG', flask_env)
 
-# Use production config if running on Vercel or if explicitly set
+# Use the config named by FLASK_CONFIG, falling back to the default
 config_class = config.get(flask_config, config['default'])
 app.config.from_object(config_class)
 
@@ -109,20 +110,9 @@ def inject_i18n():
 
 SUPPORTED_ANIMAL_TYPES = {'cattle', 'goat'}
 
-# Mzimba North blocks used for farmer/vet registration and location-based analytics.
-REGISTRATION_LOCATION_CHOICES = [
-    ('', 'Select Blocks in Mzimba North'),
-    ('Bwengu', 'Bwengu'),
-    ('Emgucwini', 'Emgucwini'),
-    ('Emsizini', 'Emsizini'),
-    ('Euthini', 'Euthini'),
-    ('Malidade', 'Malidade'),
-    ('Mbalachanda', 'Mbalachanda'),
-    ('Mpherembe', 'Mpherembe'),
-    ('Mchengautuba', 'Mchengautuba'),
-    ('Njuyu', 'Njuyu'),
-    ('Zombwe', 'Zombwe'),
-]
+# Mzimba North EPAs used for farmer/vet registration and location-based analytics
+# (the list itself lives in locations.py).
+REGISTRATION_LOCATION_CHOICES = [('', 'Select EPA in Mzimba North')] + [(epa, epa) for epa in EPA_NAMES]
 MODEL_DIRECTORY = Path(__file__).resolve().parent / 'model'
 MODEL_PATH = MODEL_DIRECTORY / 'livestock_disease_model.pkl'
 FEATURE_ENCODING_PATH = MODEL_DIRECTORY / 'feature_encoding.json'
@@ -413,6 +403,39 @@ def ensure_user_language_column():
     db.session.commit()
 
 
+def ensure_epa_locations():
+    """Bring stored user locations in line with the EPA/section list.
+
+    * EPAs that were renamed are updated, so farmers and veterinarians in that
+      EPA keep matching each other.
+    * A section typed by hand in different letter case (e.g. 'luzi') is stored
+      in its listed form ('Luzi').
+    * Approved users are then re-checked against the assignment rule so anyone
+      whose EPA now matches gets linked.
+    """
+    changed = False
+    for old_name, new_name in RENAMED_EPAS.items():
+        for user in User.query.filter_by(location=old_name).all():
+            user.location = new_name
+            changed = True
+
+    for user in User.query.filter(User.location.in_(EPA_NAMES), User.specific_location.isnot(None)).all():
+        typed = (user.specific_location or '').strip()
+        if not typed:
+            continue
+        listed = {section.lower(): section for section in EPA_SECTIONS[user.location]}
+        canonical = listed.get(typed.lower())
+        if canonical and canonical != user.specific_location:
+            user.specific_location = canonical
+            changed = True
+
+    if changed:
+        db.session.commit()
+        for user in User.query.filter(User.role.in_(['farmer', 'veterinarian']), User.status == 'approved').all():
+            auto_assign_by_location(user)
+        db.session.commit()
+
+
 def create_notification(user_id, notification_type, title, message, priority='medium', related_id=None, sender_id=None):
     notification = Notification(
         user_id=user_id,
@@ -550,6 +573,7 @@ with app.app_context():
     ensure_symptom_report_columns()
     ensure_notification_columns()
     ensure_user_language_column()
+    ensure_epa_locations()
     create_default_users()
     ensure_model_version_record()
 
@@ -695,7 +719,7 @@ def register():
         flash(_('Registration successful! Your account is awaiting admin approval.'), 'info')
         return redirect(url_for('login'))
     
-    return render_template('auth/register.html', form=form)
+    return render_template('auth/register.html', form=form, epa_sections=EPA_SECTIONS)
 
 @app.route('/logout')
 @login_required

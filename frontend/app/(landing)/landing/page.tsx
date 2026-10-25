@@ -77,7 +77,7 @@ export default function LandingPage() {
           {/* Main image: the tall right side of the L */}
           <div className="hero-visual">
             <div className="hero-card hero-card-main">
-              <img src="https://cdn.phototourl.com/free/2026-06-24-a9d92bbe-d728-4a4d-9c7d-1614cb350cb6.jpg" alt="Healthy livestock in a green field" />
+              <img src="/static/images/landing_pic.jpg" alt="Healthy livestock in a green field" />
             </div>
           </div>
         </section>

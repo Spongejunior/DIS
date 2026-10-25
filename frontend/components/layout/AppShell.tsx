@@ -43,7 +43,6 @@ export function AppShell({ page, title, sidebar, children }: AppShellProps) {
           </button>
 
           <Link className="navbar-brand" href={routes.dashboard}>
-            <img src="/static/images/logo.svg" alt="" className="brand-logo" />
             <span className="brand-text">
               <span className="brand-region">Mzimba North</span>
               <span className="brand-name">VetAssistant</span>

@@ -9,7 +9,7 @@ interface AuthCardProps {
   children: ReactNode;
 }
 
-/** The centred card with the logo that the four templates in templates/auth/ share. */
+/** The centred card that the login, register and password pages share. */
 export function AuthCard({ variant, heading, intro, children }: AuthCardProps) {
   const login = variant === 'login';
   return (
@@ -18,9 +18,6 @@ export function AuthCard({ variant, heading, intro, children }: AuthCardProps) {
         <div className={`card auth-card ${login ? 'auth-card-login auth-card-login-fixed' : 'auth-card-register'} border-0 shadow-lg bg-white`}>
           <div className="p-4 p-md-5">
             <div className="mb-4 text-center">
-              <div className="mb-3">
-                <img src="/static/images/logo.svg" alt="Mzimba North VetAssistant logo" width="64" height="64" />
-              </div>
               <p className="text-uppercase small fw-semibold text-success mb-2" style={{ letterSpacing: '0.06em' }}>Mzimba North VetAssistant</p>
               <h3 className="fw-bold text-dark mb-2">{heading}</h3>
               {intro && <p className="text-muted small mb-0">{intro}</p>}
