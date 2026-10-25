@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FlaskPage } from '@/components/layout/FlaskPage';
 import { VetSidebar } from '@/components/sidebar/Sidebar';
 import { FlaskForm } from '@/components/forms/FlaskForm';
+import { TemperatureBadge } from '@/components/predictions/CarePlan';
 import { ErrorSummaryItems, Field, HiddenTag, Label, hasErrors } from '@/components/forms/Field';
 import { routes } from '@/lib/api/routes';
 import { capitalize, percent, text } from '@/lib/utils/format';
@@ -62,6 +63,12 @@ export default function AddTreatmentPage() {
                   <div className="col-12">
                     <div className="small text-muted">AI recommended action</div>
                     <div>{prediction.recommendation_text || '--'}</div>
+                    {prediction.care_plan && (
+                      <div className="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                        <TemperatureBadge temperature={prediction.care_plan.temperature} />
+                        <span className="small text-muted">{prediction.care_plan.temperature.message}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

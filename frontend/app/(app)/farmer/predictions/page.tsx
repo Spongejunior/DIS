@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FlaskPage } from '@/components/layout/FlaskPage';
 import { FarmerSidebar } from '@/components/sidebar/Sidebar';
+import { CarePlan } from '@/components/predictions/CarePlan';
 import { routes } from '@/lib/api/routes';
 import { capitalize, confidenceColor, percent, round, strftime, text } from '@/lib/utils/format';
 import type { Prediction } from '@/types/models';
@@ -37,10 +38,17 @@ function LatestPrediction({ latest }: { latest: Prediction }) {
                   {others.slice(1).map((d) => `${d.disease} (${percent(d.probability)}%)`).join(', ')}
                 </p>
               )}
-              <p>
-                <strong>Recommended Action:</strong>{' '}
-                {latest.recommendation_text || 'Isolate the animal and wait for veterinarian review and prescription.'}
-              </p>
+              {latest.care_plan ? (
+                <div className="bg-white rounded p-3 text-dark mb-2">
+                  <CarePlan plan={latest.care_plan} compact />
+                  <Link href={routes.predictionDetail(latest.id)} className="small">Full care plan, danger signs and sources</Link>
+                </div>
+              ) : (
+                <p>
+                  <strong>Recommended Action:</strong>{' '}
+                  {latest.recommendation_text || 'Isolate the animal and wait for veterinarian review and prescription.'}
+                </p>
+              )}
               <div className="mt-2">
                 <span className={`badge bg-${reviewBadge(latest.review_status)}`}>
                   Review: {capitalize(latest.review_status)}

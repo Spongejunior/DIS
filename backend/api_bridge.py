@@ -89,8 +89,9 @@ def _report(report):
 
 
 def _prediction(prediction):
-    data = _columns(prediction, {'features_used'})
+    data = _columns(prediction, {'features_used', 'care_plan'})
     data['possible'] = prediction.get_possible_diseases()
+    data['care_plan'] = prediction.get_care_plan()
     report = prediction.symptom_report
     data['symptom_report'] = _report(report) if report else None
     return data

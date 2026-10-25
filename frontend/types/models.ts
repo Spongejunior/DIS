@@ -48,7 +48,35 @@ export interface SymptomReport {
 
 export interface PossibleDisease {
   disease: string;
+  /** After the temperature adjustment. */
   probability: number;
+  /** The model alone, before the temperature adjustment (newer predictions only). */
+  model_probability?: number;
+}
+
+export interface TemperatureAssessment {
+  value: number | null;
+  normal_range: [number, number];
+  status: 'unknown' | 'implausible' | 'low' | 'normal' | 'fever' | 'high_fever';
+  label: string;
+  message: string;
+}
+
+/** Built by backend/clinical_guidance.py: what the farmer does while waiting for the vet. */
+export interface CarePlan {
+  disease: string;
+  summary: string;
+  urgency: 'routine' | 'soon' | 'urgent' | 'emergency';
+  urgency_label: string;
+  notifiable: boolean;
+  zoonotic: boolean;
+  temperature: TemperatureAssessment;
+  steps: string[];
+  general_steps: string[];
+  danger_signs: string[];
+  warnings: string[];
+  sources: { title: string; url: string }[];
+  disclaimer: string;
 }
 
 export interface Prediction {
@@ -64,6 +92,8 @@ export interface Prediction {
   review_notes: string | null;
   reviewed_at: string | null;
   possible: PossibleDisease[];
+  /** Null for predictions made before care plans existed. */
+  care_plan: CarePlan | null;
   symptom_report: SymptomReport | null;
 }
 

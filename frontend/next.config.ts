@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   // development and the first request would consume the flash messages.
   reactStrictMode: false,
 
+  // How long to wait for Flask before failing a proxied request (default 30s).
+  // A prediction can be slow while the model loads for the first time.
+  experimental: {
+    proxyTimeout: 180_000,
+  },
+
   // Proxied through the Next.js server so the browser stays on one origin and
   // the Flask session cookie works exactly as before.
   async rewrites() {

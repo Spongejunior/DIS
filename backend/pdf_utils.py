@@ -5,6 +5,7 @@ charts embedded as PNG images. Kept separate from app.py to isolate the
 dependency and avoid touching the core request flow.
 """
 from io import BytesIO
+from xml.sax.saxutils import escape
 
 import matplotlib
 matplotlib.use('Agg')
@@ -189,8 +190,37 @@ def build_prediction_pdf(prediction, report, possible_diseases, generated_on):
     # Recommendation
     story.append(Paragraph('Recommended Action', s['CH2']))
     story.append(Paragraph(
-        str(prediction.recommendation_text or 'Isolate the animal and wait for veterinarian review and prescription.'),
+        escape(str(prediction.recommendation_text or 'Isolate the animal and wait for veterinarian review and prescription.')),
         s['CBody']))
+    story.append(Spacer(1, 6))
+
+    care_plan = prediction.get_care_plan() if hasattr(prediction, 'get_care_plan') else None
+    if care_plan:
+        temperature = care_plan.get('temperature', {})
+        rows = [
+            ['Urgency', care_plan.get('urgency_label', '-')],
+            ['Temperature', '%s: %s' % (temperature.get('label', '-'), temperature.get('message', ''))],
+            ['Notifiable', 'Yes: report to the veterinary office' if care_plan.get('notifiable') else 'No'],
+            ['Can infect people', 'Yes' if care_plan.get('zoonotic') else 'No'],
+        ]
+        # Paragraphs so long values wrap inside the table cell.
+        story.append(_kv_table([[label, Paragraph(escape(str(value)), s['CBody'])] for label, value in rows]))
+        sections = [
+            ('While you wait for the veterinarian', care_plan.get('warnings', []) + care_plan.get('steps', [])),
+            ('For every sick animal', care_plan.get('general_steps', [])),
+            ('Call the veterinarian immediately if', care_plan.get('danger_signs', [])),
+        ]
+        for heading, items in sections:
+            if not items:
+                continue
+            story.append(Paragraph(heading, s['CH2']))
+            for item in items:
+                story.append(Paragraph('&bull; ' + escape(str(item)), s['CBody']))
+        sources = care_plan.get('sources', [])
+        if sources:
+            story.append(Spacer(1, 4))
+            story.append(Paragraph(
+                'Sources: ' + '; '.join(escape(source['title']) for source in sources), s['CSmall']))
     story.append(Spacer(1, 10))
     story.append(Paragraph(
         'This AI-generated prediction is a decision-support aid and does not replace professional '

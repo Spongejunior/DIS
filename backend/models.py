@@ -150,7 +150,10 @@ class Prediction(db.Model):
     
     # Safety recommendation (shown to farmer while waiting for vet)
     recommendation_text = db.Column(db.Text)
-    
+    # JSON care plan from clinical_guidance.build_care_plan: temperature check,
+    # containment steps, danger signs and sources
+    care_plan = db.Column(db.Text)
+
     # Common cattle/goat diseases
     possible_diseases = db.Column(db.Text)  # JSON list of possible diseases with probabilities
     
@@ -170,6 +173,11 @@ class Prediction(db.Model):
         if self.possible_diseases:
             return json.loads(self.possible_diseases)
         return []
+
+    def get_care_plan(self):
+        if self.care_plan:
+            return json.loads(self.care_plan)
+        return None
 
 class Treatment(db.Model):
     __tablename__ = 'treatment'

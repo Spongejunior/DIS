@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FlaskPage } from '@/components/layout/FlaskPage';
 import { PredictionDetailSidebar } from '@/components/sidebar/Sidebar';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
+import { CarePlan, TemperatureBadge } from '@/components/predictions/CarePlan';
 import { routes } from '@/lib/api/routes';
 import { capitalize, confidenceColor, percent, pyFloat, round, strftime, text } from '@/lib/utils/format';
 import type { PossibleDisease, Prediction, SymptomReport } from '@/types/models';
@@ -69,6 +70,7 @@ export default function PredictionDetailPage() {
                     <div className="d-flex gap-2 flex-wrap">
                       <span className={`badge bg-${severe ? 'danger' : 'secondary'} px-3 py-2`}>Severity: {capitalize(prediction.severity)}</span>
                       <span className={`badge bg-${reviewColor} px-3 py-2`}>Vet review: {capitalize(prediction.review_status)}</span>
+                      {prediction.care_plan && <TemperatureBadge temperature={prediction.care_plan.temperature} />}
                       <span className="badge bg-light text-dark px-3 py-2">{prediction.predicted_at ? strftime(prediction.predicted_at, '%Y-%m-%d %H:%M') : '--'}</span>
                     </div>
                   </div>
@@ -145,9 +147,13 @@ export default function PredictionDetailPage() {
               {/* Recommendation */}
               <div className="col-12">
                 <div className="card border-0 shadow-sm">
-                  <div className="card-header bg-white py-3"><h6 className="fw-bold mb-0"><i className="bi bi-lightbulb text-warning"></i> Recommended Action</h6></div>
+                  <div className="card-header bg-white py-3"><h6 className="fw-bold mb-0"><i className="bi bi-lightbulb text-warning"></i> {prediction.care_plan ? 'Care Plan Until the Veterinarian Arrives' : 'Recommended Action'}</h6></div>
                   <div className="card-body">
-                    <p className="mb-0">{prediction.recommendation_text || 'Isolate the animal and wait for veterinarian review and prescription.'}</p>
+                    {prediction.care_plan ? (
+                      <CarePlan plan={prediction.care_plan} />
+                    ) : (
+                      <p className="mb-0">{prediction.recommendation_text || 'Isolate the animal and wait for veterinarian review and prescription.'}</p>
+                    )}
                     {prediction.review_notes && (
                       <>
                         <hr />

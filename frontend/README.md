@@ -33,6 +33,14 @@ BACKEND_URL=http://127.0.0.1:5000
 For production: `npm run build` then `npm run start`. `BACKEND_URL` is read at
 build time.
 
+Requests forwarded to Flask may take up to 3 minutes before Next.js gives up
+(`experimental.proxyTimeout` in `next.config.ts`; the Next.js default is 30
+seconds). The first prediction after Flask starts can be slow while the model
+loads, and a timeout shows the generic 500 page.
+
+See the [project README](../README.md) for the whole system, including how
+predictions and care plans are made.
+
 ## How it talks to Flask
 
 The browser only ever talks to the Next.js server, which forwards `/api/*` and
@@ -68,6 +76,7 @@ components/layout/          AppShell (navbar, sidebar, flashes), FlaskPage, Auth
 components/sidebar/         the per-role sidebars
 components/forms/           FlaskForm (POST to a Flask view) and WTForms field rendering
 components/charts/          Chart.js canvas
+components/predictions/     CarePlan: temperature check and containment steps shown with a prediction
 lib/api/                    bridge client and the Flask URL table
 lib/utils/                  formatting that reproduces the Jinja output, DOM helpers
 hooks/usePage.tsx           loads the current URL's data from Flask
