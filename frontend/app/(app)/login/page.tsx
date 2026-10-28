@@ -21,9 +21,8 @@ function LoginForm({ form }: { form: FormData_ }) {
         <Label field={f.username} className="form-label small fw-bold text-muted" />
         <div className="input-group">
           <span className="input-group-text border-0 bg-light"><i className="bi bi-person text-muted"></i></span>
-          <Field field={f.username} className="form-control border-0 bg-light py-2" placeholder="Example: thokobanda12" />
+          <Field field={f.username} className="form-control border-0 bg-light py-2" placeholder="Enter your username" />
         </div>
-        <div className="form-text">Enter the username you registered with.</div>
         <FieldErrors field={f.username} />
       </div>
 
@@ -36,7 +35,6 @@ function LoginForm({ form }: { form: FormData_ }) {
             <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'} text-muted`}></i>
           </button>
         </div>
-        <div className="form-text">Passwords are case-sensitive.</div>
         <FieldErrors field={f.password} />
       </div>
 
