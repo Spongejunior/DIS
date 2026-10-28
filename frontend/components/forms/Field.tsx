@@ -97,3 +97,16 @@ export function ErrorSummaryItems({ form }: { form: FormData_ }) {
 export function hasErrors(form: FormData_): boolean {
   return Object.keys(form.errors).length > 0;
 }
+
+/** For forms inside a modal: after a failed submit the modal is closed, so the errors are listed on the page. */
+export function FormErrorAlert({ form, title }: { form: FormData_; title: string }) {
+  if (!hasErrors(form)) return null;
+  return (
+    <div className="alert alert-danger border-0 shadow-sm mb-4">
+      <h6 className="fw-bold"><i className="bi bi-exclamation-triangle-fill me-1"></i> {title}</h6>
+      <ul className="mb-0 small">
+        <ErrorSummaryItems form={form} />
+      </ul>
+    </div>
+  );
+}

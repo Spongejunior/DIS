@@ -2,19 +2,20 @@
 
 The user interface of VetAssistant, built with Next.js (App Router), React and
 TypeScript. It replaced the Flask/Jinja templates, which have been removed; it
-looks and behaves like them and uses the same Flask backend, database and
-login session. Flask no longer renders HTML, so the app is always used through
-this frontend.
+looks and behaves like them. The backend (originally Flask, now Django, with
+the same URLs, JSON and database) does not render HTML, so the app is always
+used through this frontend.
 
 ## Running it
 
-Two processes are needed: the Flask backend and this frontend.
+Two processes are needed: the Django backend and this frontend.
 
 ```bash
 # 1. Backend, from the backend/ folder (serves on port 80)
 cd backend
 pip install -r requirements.txt
-python app.py
+python manage.py migrate --fake-initial
+python manage.py runserver
 
 # 2. Frontend, in a second terminal from the frontend/ folder
 cd frontend
@@ -22,34 +23,34 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Open http://localhost:3000. If Flask runs on another port, say so before
+Open http://localhost:3000. If the backend runs on another port, say so before
 starting the frontend:
 
 ```bash
 # .env.local
-BACKEND_URL=http://127.0.0.1:5000
+BACKEND_URL=http://127.0.0.1:8000
 ```
 
 For production: `npm run build` then `npm run start`. `BACKEND_URL` is read at
 build time.
 
-Requests forwarded to Flask may take up to 3 minutes before Next.js gives up
+Requests forwarded to the backend may take up to 3 minutes before Next.js gives up
 (`experimental.proxyTimeout` in `next.config.ts`; the Next.js default is 30
-seconds). The first prediction after Flask starts can be slow while the model
+seconds). The first prediction after the backend starts can be slow while the model
 loads, and a timeout shows the generic 500 page.
 
 See the [project README](../README.md) for the whole system, including how
 predictions and care plans are made.
 
-## How it talks to Flask
+## How it talks to the backend
 
 The browser only ever talks to the Next.js server, which forwards `/api/*` and
-the two PDF downloads to Flask (see `next.config.ts`). Because everything stays
-on one origin, the Flask session cookie, CSRF tokens and `remember me` work as
+the two PDF downloads to the backend (see `next.config.ts`). Because everything stays
+on one origin, the session cookie, CSRF tokens and `remember me` work as
 they did before.
 
-Flask has no separate JSON API; `backend/api_bridge.py` exposes the existing views
-instead. A request to `/api/v1/page/<path>` runs the Flask view for `<path>`
+The backend has no separate JSON API; `backend/core/bridge.py` exposes the page views
+instead. A request to `/api/v1/page/<path>` runs the Django view for `<path>`
 and returns the data that view prepares for its page as JSON:
 
 ```json
@@ -57,7 +58,7 @@ and returns the data that view prepares for its page as JSON:
 ```
 
 A redirect comes back as `{ "redirect": "/login" }`. Validation, permissions,
-flash messages and business rules all stay in the Flask views. The `template`
+flash messages and business rules all stay in the backend views. The `template`
 value is only a page name now.
 
 ## Layout
@@ -71,21 +72,22 @@ app/(app)/                  every page that used templates/base.html
   organization/...          dashboard, user_management, reports, profile
   system/...                dashboard, logs, performance, updates
   predictions/[id]          prediction report shared by all roles
-  [...slug]                 any other URL, answered by Flask's 404 page
+  [...slug]                 any other URL, answered by the backend's 404 page
 components/layout/          AppShell (navbar, sidebar, flashes), FlaskPage, AuthCard
 components/sidebar/         the per-role sidebars
-components/forms/           FlaskForm (POST to a Flask view) and WTForms field rendering
+components/forms/           FlaskForm (POST to a backend view) and form field rendering
+                            (the names date from the Flask backend)
 components/charts/          Chart.js canvas
 components/predictions/     CarePlan: temperature check and containment steps shown with a prediction
-lib/api/                    bridge client and the Flask URL table
+lib/api/                    bridge client and the backend URL table
 lib/utils/                  formatting that reproduces the Jinja output, DOM helpers
-hooks/usePage.tsx           loads the current URL's data from Flask
+hooks/usePage.tsx           loads the current URL's data from the backend
 types/                      API and model types
 public/static/              the existing CSS and images, at their original URLs
 ```
 
 Each page is one file that replaced one template; the name of the template it
-came from is in a comment above the component. URLs are identical to the Flask
+came from is in a comment above the component. URLs are identical to the backend
 routes.
 
 ## Styling

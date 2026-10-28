@@ -1,5 +1,5 @@
-# Use a secure, slim Python image that supports numpy/pandas wheels
-FROM python:3.11-slim
+# Django 6 needs Python 3.12 or newer
+FROM python:3.12-slim
 
 # Set working directory inside the container
 WORKDIR /app
@@ -23,5 +23,5 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy the rest of your application code
 COPY . .
 
-# Serve the app with gunicorn on port 10000
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
+# Bring the database up to date, then serve the app with gunicorn on port 10000
+CMD ["sh", "-c", "python manage.py migrate --fake-initial --noinput && gunicorn vetassistant.wsgi:application --bind 0.0.0.0:10000"]

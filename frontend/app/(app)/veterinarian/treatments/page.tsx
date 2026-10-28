@@ -2,8 +2,8 @@
 
 import { FlaskPage } from '@/components/layout/FlaskPage';
 import { VetSidebar } from '@/components/sidebar/Sidebar';
-import { FlaskForm, processingOnSubmit } from '@/components/forms/FlaskForm';
-import { Field, HiddenTag, Label } from '@/components/forms/Field';
+import { FlaskForm } from '@/components/forms/FlaskForm';
+import { Field, FieldErrors, FormErrorAlert, HiddenTag, Label } from '@/components/forms/Field';
 import { routes } from '@/lib/api/routes';
 import type { FormData_ } from '@/types/api';
 import type { Treatment } from '@/types/models';
@@ -38,6 +38,8 @@ export default function TreatmentSuggestionsPage() {
               </button>
             </div>
 
+            <FormErrorAlert form={form} title="The treatment plan was not saved. Please correct the following:" />
+
             {/* Pending Treatment Approvals */}
             <div className="card mb-4">
               <div className="card-header bg-warning">
@@ -68,12 +70,11 @@ export default function TreatmentSuggestionsPage() {
                             <td>{t.dosage || '--'}</td>
                             <td>{t.duration || '--'}</td>
                             <td>
-                              {/* Posts straight to the existing JSON endpoint, as the template did */}
-                              <form method="POST" action={routes.approveTreatment(t.id)} className="d-inline" onSubmit={processingOnSubmit}>
+                              <FlaskForm action={routes.approveTreatment(t.id)} className="d-inline">
                                 <button type="submit" className="btn btn-sm btn-success">
                                   <i className="bi bi-check"></i> Approve
                                 </button>
-                              </form>
+                              </FlaskForm>
                             </td>
                           </tr>
                         ))
@@ -168,8 +169,18 @@ export default function TreatmentSuggestionsPage() {
                     <HiddenTag form={form} />
                     <div className="modal-body">
                       <div className="mb-3">
+                        <Label field={f.case} className="form-label" />
+                        <Field field={f.case} className="form-select" />
+                        <FieldErrors field={f.case} />
+                        {(f.case.choices?.length ?? 0) <= 1 && (
+                          <div className="form-text">No cases yet: your assigned farmers have not reported any symptoms.</div>
+                        )}
+                      </div>
+
+                      <div className="mb-3">
                         <Label field={f.medication} className="form-label" />
                         <Field field={f.medication} className="form-control" />
+                        <FieldErrors field={f.medication} />
                       </div>
 
                       <div className="row mb-3">

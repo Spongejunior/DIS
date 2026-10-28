@@ -4,7 +4,7 @@ import { FlaskPage } from '@/components/layout/FlaskPage';
 import { OrgAdminSidebar } from '@/components/sidebar/Sidebar';
 import { ChartCanvas } from '@/components/charts/ChartCanvas';
 import { FlaskForm, processingOnSubmit } from '@/components/forms/FlaskForm';
-import { Field, HiddenTag, Label } from '@/components/forms/Field';
+import { Field, FormErrorAlert, HiddenTag, Label } from '@/components/forms/Field';
 import { routes } from '@/lib/api/routes';
 import { pyFloat, round, strftime, text } from '@/lib/utils/format';
 import type { FormData_ } from '@/types/api';
@@ -59,6 +59,8 @@ export default function OrgReportsPage() {
                 </button>
               </div>
             </div>
+
+            <FormErrorAlert form={ctx.form} title="The report was not generated. Please correct the following:" />
 
             {/* Filters */}
             <div className="card mb-4">

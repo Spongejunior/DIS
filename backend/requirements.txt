@@ -1,17 +1,10 @@
-Flask==2.3.3
+Django==6.1.1
 gunicorn==22.0.0
-Flask-SQLAlchemy==3.0.5
-Flask-Login==0.6.2
-Flask-WTF==1.1.1
-Flask-Mail==0.9.1
-Flask-Babel==4.0.0
-Babel==2.14.0
-WTForms==3.0.1
-email-validator==2.0.0
 python-dotenv==1.0.0
 # PostgreSQL driver (DATABASE_URL=postgresql://...)
 psycopg2-binary>=2.9
-werkzeug==2.3.7
+# Password hashing: keeps the existing (Werkzeug-format) password hashes working
+Werkzeug>=2.3.7
 
 # Machine learning / prediction runtime
 scikit-learn==1.9.0

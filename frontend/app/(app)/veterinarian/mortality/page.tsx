@@ -3,7 +3,7 @@
 import { FlaskPage } from '@/components/layout/FlaskPage';
 import { VetSidebar } from '@/components/sidebar/Sidebar';
 import { FlaskForm } from '@/components/forms/FlaskForm';
-import { Field, HiddenTag, Label } from '@/components/forms/Field';
+import { Field, FormErrorAlert, HiddenTag, Label } from '@/components/forms/Field';
 import { capitalize, strftime } from '@/lib/utils/format';
 import type { FormData_ } from '@/types/api';
 import type { MortalityReport } from '@/types/models';
@@ -45,6 +45,8 @@ export default function MortalityReportsPage() {
                 <i className="bi bi-plus-circle"></i> New Mortality Report
               </button>
             </div>
+
+            <FormErrorAlert form={form} title="The mortality report was not saved. Please correct the following:" />
 
             {/* Mortality Statistics */}
             <div className="row mb-4">
@@ -118,6 +120,14 @@ export default function MortalityReportsPage() {
                   <FlaskForm>
                     <HiddenTag form={form} />
                     <div className="modal-body">
+                      <div className="mb-3">
+                        <Label field={f.farmer} className="form-label" />
+                        <Field field={f.farmer} className="form-select" />
+                        {(f.farmer.choices?.length ?? 0) <= 1 && (
+                          <div className="form-text">You have no assigned farmers yet.</div>
+                        )}
+                      </div>
+
                       <div className="row mb-3">
                         <div className="col-md-6">
                           <Label field={f.animal_type} className="form-label" />

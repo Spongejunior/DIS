@@ -12,16 +12,22 @@ it and prescribes treatment.
 ## Project layout
 
 ```text
-backend/                Flask app (JSON only) + database + ML model
-  app.py                routes, prediction pipeline, startup migrations
-  clinical_guidance.py  temperature check, temperature adjustment, care plans and sources
-  api_bridge.py         serves every Flask view as JSON at /api/v1/page/<path>
-  config.py             settings; reads backend/.env (DATABASE_URL, ...)
-  migrate_sqlite_to_postgres.py  one-time copy of the SQLite data into PostgreSQL
-  models.py             SQLAlchemy models
-  forms.py              WTForms forms (validation)
-  locations.py          Mzimba North EPAs and sections
-  pdf_utils.py          prediction and report PDFs
+backend/                Django app (JSON only) + database + ML model
+  manage.py             Django commands: runserver, migrate, import_sqlite, ...
+  vetassistant/         project: settings.py (reads backend/.env: DATABASE_URL, ...), urls.py, wsgi.py
+  core/                 the app
+    views.py            pages and actions (one view per URL)
+    urls.py             page URLs (same paths as the frontend pages)
+    bridge.py           serves every view as JSON at /api/v1/page/<path>
+    models.py           database models (the existing tables and columns)
+    forms.py            forms (validation)
+    services.py         access checks, record ids, farmer/vet assignment, notifications, log, email
+    prediction.py       prediction pipeline (model, temperature, care plan)
+    clinical_guidance.py  temperature check, temperature adjustment, care plans and sources
+    locations.py        Mzimba North EPAs and sections
+    pdf_utils.py        prediction and report PDFs
+    migrations/         database schema (0001) and demo accounts / start-up data (0002)
+    management/commands/  import_sqlite (copy SQLite data into PostgreSQL), runserver on port 80
   model/                livestock_disease_model.pkl (stacking ensemble) + feature_encoding.json
   data/                 training data (raw/cattle_goat.xlsx, encoded/encoded_data.csv)
   instance/database.db  old SQLite database (used only when DATABASE_URL is not set)
@@ -42,24 +48,36 @@ DATABASE_URL=postgresql://postgres:<password>@127.0.0.1:5432/mzimbanorth
 
 Special characters in the password must be URL-encoded (`$` → `%24`,
 `@` → `%40`). If `DATABASE_URL` is not set, the app falls back to the SQLite
-file `backend/instance/database.db`. Tables and new columns are created
-automatically when Flask starts.
+file `backend/instance/database.db`.
+
+Tables are created and updated by Django's migrations. Run this from
+`backend/` after installing or updating the code:
+
+```bash
+python manage.py migrate --fake-initial
+```
+
+`--fake-initial` lets Django take over a database that the earlier Flask
+version created: the tables already exist, so Django records them as created
+instead of creating them again. It does nothing on a new, empty database. The
+migrations also create the demo accounts and the model version record.
 
 **Setting up on another computer:** create an empty database
 (`CREATE DATABASE mzimbanorth;` in psql or pgAdmin), create `backend/.env` as
-above, and start Flask. To bring over existing data from a SQLite file, run
-this once from `backend/` before starting Flask:
+above, and run `python manage.py migrate`. To bring over existing data from a
+SQLite file, run this once from `backend/` afterwards:
 
 ```bash
-python migrate_sqlite_to_postgres.py            # into DATABASE_URL from .env
-python migrate_sqlite_to_postgres.py --replace  # empty the PostgreSQL tables first
+python manage.py import_sqlite --replace                   # from instance/database.db
+python manage.py import_sqlite --replace --source other.db
 ```
 
-The script copies every table in one transaction (all or nothing), checks the
-data for anything PostgreSQL would reject before writing, moves the id
+The command copies every table in one transaction (all or nothing), checks
+the data for anything PostgreSQL would reject before writing, moves the id
 counters past the copied ids, and compares row counts. The SQLite file is
 only read. It refuses to write into tables that already have data unless
-`--replace` is given.
+`--replace` is given (`migrate` has already added the demo accounts, so
+`--replace` is needed; they are replaced by the copied data).
 
 The data was migrated from SQLite on 2026-10-25. A backup of the SQLite file
 from that moment is in `backend/instance/` (`database.sqlite-backup-*.db`, not
@@ -74,7 +92,8 @@ Then use two terminals:
 # 1. Backend (port 80)
 cd backend
 pip install -r requirements.txt
-python app.py
+python manage.py migrate --fake-initial
+python manage.py runserver
 
 # 2. Frontend
 cd frontend
@@ -83,24 +102,26 @@ npm run dev
 ```
 
 Open **http://localhost:3000**. Always use the frontend address; it forwards
-requests to Flask.
+requests to the backend.
 
-If port 80 is taken, change `port=80` at the bottom of `backend/app.py` and put
-`BACKEND_URL=http://127.0.0.1:<port>` in `frontend/.env.local`.
+`runserver` uses port 80 by default here. If port 80 is taken, start it on
+another port (`python manage.py runserver 8000`) and put
+`BACKEND_URL=http://127.0.0.1:8000` in `frontend/.env.local`.
 
-**With Docker (backend only):** from `backend/`, run
+**With Docker (backend only):** the container runs the migrations and then
+serves the app with gunicorn. From `backend/`, run
 `docker build -t vetassistant-backend .` and
 `docker run -p 10000:10000 vetassistant-backend`, then set
 `BACKEND_URL=http://127.0.0.1:10000` for the frontend.
 
-**Demo accounts** (created on first start, password `pass123`): `sysadmin`,
+**Demo accounts** (created by `migrate`, password `pass123`): `sysadmin`,
 `orgadmin`, `vet1`, `farmer1`. Change these passwords before real use. (The
 old SQLite file, which also holds these accounts, is still in the repository.)
 
 ## How a prediction is made
 
 When a farmer submits the symptom form (`/farmer/symptoms`), `create_prediction`
-in `backend/app.py` runs these steps:
+in `backend/core/prediction.py` runs these steps:
 
 1. **Temperature check.** The reading is compared with the species' normal
    rectal range from the Merck Veterinary Manual: cattle 38.0–39.3 °C, goats
@@ -191,19 +212,21 @@ only; it is not yet translated into Chichewa or Tumbuka.
 
 ## Troubleshooting
 
-- **Flask fails to start with "connection refused" or "password
+- **The backend fails to start with "connection refused" or "password
   authentication failed":** PostgreSQL is not running, or the user/password in
   `backend/.env` is wrong. The username is `postgres`.
-
+- **"relation ... already exists" when running `migrate`:** the database was
+  created by the Flask version; run `python manage.py migrate --fake-initial`.
 - **"500 – An unexpected error occurred" in the browser:** the frontend shows
-  this whenever Flask does not answer properly. Check that Flask is running,
-  and look at its terminal for an error.
-- **Slow first prediction:** Flask loads the model in the background when it
-  starts. On Windows the first load can take a few minutes while the ML
-  libraries are scanned; the frontend waits up to 3 minutes.
+  this whenever the backend does not answer properly. Check that
+  `python manage.py runserver` is running, and look at its terminal for an
+  error.
+- **Slow first prediction:** the backend loads the model in the background
+  when it starts. On Windows the first load can take a few minutes while the
+  ML libraries are scanned; the frontend waits up to 3 minutes.
 - **"An Application Control policy has blocked this file":** Windows blocked
   an ML library file. Allow Python in Windows Security (Smart App Control),
-  then restart Flask.
+  then restart the backend.
 - **"Symptoms were saved, but the trained model could not generate a
   prediction":** the reason is recorded in the system logs (system admin →
   Logs, component `model`).
