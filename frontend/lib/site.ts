@@ -10,7 +10,6 @@ export const siteMetadata: Metadata = {
   applicationName: NAME,
   description: DESCRIPTION,
   openGraph: { siteName: NAME, title: NAME, description: DESCRIPTION, type: 'website' },
-  icons: { icon: { url: '/static/images/logo.svg', type: 'image/svg+xml' } },
 };
 
 export const siteViewport: Viewport = {

@@ -36,12 +36,6 @@
             gap: 0.6rem;
         }
 
-        .navbar-brand .brand-logo {
-            width: 38px;
-            height: 38px;
-            flex-shrink: 0;
-        }
-
         .navbar-brand .brand-text {
             display: flex;
             flex-direction: column;

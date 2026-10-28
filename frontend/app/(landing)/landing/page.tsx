@@ -6,9 +6,6 @@ export default function LandingPage() {
     <div className="landing-shell">
       <header className="site-header">
         <div className="brand">
-          <div className="brand-mark">
-            <img src="/static/images/logo.svg" alt="Mzimba North VetAssistant logo" />
-          </div>
           <div>
             <h1>Mzimba North VetAssistant</h1>
             <p>Livestock disease identification &amp; veterinary assistance</p>
